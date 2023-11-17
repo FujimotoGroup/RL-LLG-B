@@ -38,12 +38,14 @@ class QNet(Model):
         super().__init__()
         self.l1 = L.Linear(128)
         self.l2 = L.Linear(128)
-        self.l3 = L.Linear(3)
+        self.l3 = L.Linear(128)
+        self.l4 = L.Linear(3)
 
     def forward(self, x):
         x = F.relu(self.l1(x))
         x = F.relu(self.l2(x))
-        x = self.l3(x)
+        x = F.relu(self.l3(x))
+        x = self.l4(x)
         return x
 
 class DQNAgent:
@@ -83,7 +85,8 @@ class DQNAgent:
         next_qs = self.qnet_target(next_state)
         next_q = next_qs.max(axis=1)
         next_q.unchain()
-        target = reward + done * self.gamma * next_q
+#        target = reward + done * self.gamma * next_q
+        target = reward + self.gamma * next_q
 
         loss = F.mean_squared_error(q, target)
 
@@ -95,83 +98,87 @@ class DQNAgent:
 
 
 def main():
-    episodes = 500
+    episodes = 300
     sync_interval = 20
 
     dt = 5e-13 # [s]
     alphaG = 0.01
     uniaxial_anisotropy = 540e0 # [Oe]
-    dh = 50e0 # [Oe]
+    dh = 100 # [Oe]
+    da = 200
     m0 = np.array([0e0, 0e0, 1e0])
 
     agent = DQNAgent()
     reward_history = []
-    high_reward = -6
+    high_reward = -50
     loss_history = []
 
     for episode in range(episodes):
         print("episode:{:>4}".format(episode), end=":")
-        dynamics = s.Dynamics(dt, alphaG, uniaxial_anisotropy, m0, limit=2001)
+        dynamics = s.Dynamics(dt, alphaG, uniaxial_anisotropy, m0, limit=4001)
 
         t = []
         m = []
         h = []
 
-        if episode < 100:
-            epsilon = 0.2
-        elif episode < 400:
-            epsilon = 0.1
-        else:
-            epsilon = 0.01
+        epsilon = 0.1
+
+        if episode % 50 == 0:
+            print("epsilon:{:.2f}".format(epsilon), end=":")
 
         old_m = np.array([0e0, 0e0, 1e0])
-        old_reward = - old_m[2]
+        reward = 0
         total_reward = 0
         total_loss = 0
         cnt = 0
         done = 1
         field = np.array([0e0, 0e0, 0e0])
+        old_state = np.concatenate([old_m, field])
 
         for i in np.arange(dynamics.limit):
-            if i % 200 == 0:
-                action = agent.get_action(dynamics.m, epsilon)
+            if i == 0:
+                action = agent.get_action(old_state, epsilon)
                 h0 = action - 1
-                if i == 0:
-                    old_action = action
+                old_action = action                    
 
-            field += np.array([dh*h0*2e-2, 0e0, 0e0])      
+            field += np.array([dh*h0/da, 0e0, 0e0])      
 
             time = i*dt
 
             dynamics.RungeKutta(field)
 
             if i % 10 == 0:
+#                reward += - dynamics.m[2] / (da/10)
                 t.append(time)
                 m.append(dynamics.m)
                 h.append(copy(field))
 
-            if i % 200 == 0:
+            if i % da == 0 and i != 0:
+                state = np.concatenate([dynamics.m, field/1e4])
+                action = agent.get_action(state, epsilon)
+                h0 = action - 1
+
                 reward = - dynamics.m[2]
                 total_reward += reward
 
                 if i == dynamics.limit - 1:
-                    done = 0
+                    done = 0   
+                             
+                loss = agent.update(old_state, old_action, reward, state, done)
 
-                if i != 0:
-                    loss = agent.update(old_m, old_action, old_reward, dynamics.m, done)
-                    if episode > sync_interval:
-                        total_loss += loss
-                        cnt += 1
+                if episode > sync_interval:
+                    total_loss += loss
+                    cnt += 1
 
-                    old_m = dynamics.m
-                    old_action = action
-                    old_reward = reward
+                old_state = state
+                old_action = action
+                reward = 0
 
         if episode % sync_interval == 0:
             agent.sync_qnet()
 
         if total_reward > high_reward:
-            s.save_episode(episode, t, m, h, "fig_dqn3")
+            s.save_episode(episode, t, m, h, "fig_DQN_X")
             high_reward = total_reward
 
         print("reward = {:.9f}".format(total_reward))
@@ -181,9 +188,9 @@ def main():
         if episode > sync_interval:
             ave_loss = total_loss / cnt
             loss_history.append(ave_loss)
-            s.save_loss_history(loss_history, "fig_dqn3")
+            s.save_loss_history(loss_history, "fig_DQN_X")
 
-        s.save_reward_history(reward_history, "fig_dqn3")
+        s.save_reward_history(reward_history, "fig_DQN_X")
 
 
 if __name__ == '__main__':
