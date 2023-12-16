@@ -39,7 +39,7 @@ class QNet(Model):
         self.l1 = L.Linear(128)
         self.l2 = L.Linear(128)
         self.l3 = L.Linear(128)
-        self.l4 = L.Linear(3)
+        self.l4 = L.Linear(27)
 
     def forward(self, x):
         x = F.relu(self.l1(x))
@@ -54,7 +54,7 @@ class DQNAgent:
         self.lr = 0.0005
         self.buffer_size = 10000
         self.batch_size = 32
-        self.action_size = 3
+        self.action_size = 27
 
         self.replay_buffer = ReplayBuffer(self.buffer_size, self.batch_size)
         self.qnet = QNet()
@@ -85,8 +85,7 @@ class DQNAgent:
         next_qs = self.qnet_target(next_state)
         next_q = next_qs.max(axis=1)
         next_q.unchain()
-#        target = reward + done * self.gamma * next_q
-        target = reward + self.gamma * next_q
+        target = reward + done * self.gamma * next_q
 
         loss = F.mean_squared_error(q, target)
 
@@ -98,10 +97,11 @@ class DQNAgent:
 
 
 def main():
-    episodes = 300
+    episodes = 1000
     sync_interval = 20
 
     dt = 5e-13 # [s]
+    t_fin = 1e-9 # [s]
     alphaG = 0.01
     uniaxial_anisotropy = 540e0 # [Oe]
     dh = 100 # [Oe]
@@ -115,16 +115,13 @@ def main():
 
     for episode in range(episodes):
         print("episode:{:>4}".format(episode), end=":")
-        dynamics = s.Dynamics(dt, alphaG, uniaxial_anisotropy, m0, limit=4001)
+        dynamics = s.Dynamics(dt, alphaG, uniaxial_anisotropy, m0, limit=2e12*t_fin+1)
 
         t = []
         m = []
         h = []
 
         epsilon = 0.1
-
-#        if episode % 50 == 0:
-#            print("epsilon:{:.2f}".format(epsilon), end=":")
 
         old_m = np.array([0e0, 0e0, 1e0])
         reward = 0
@@ -138,10 +135,65 @@ def main():
         for i in np.arange(dynamics.limit):
             if i == 0:
                 action = agent.get_action(old_state, epsilon)
-                h0 = action - 1
+
+                if action == 0:
+                    a = [-1, -1, -1]
+                if action == 1:
+                    a = [-1, -1, 0]
+                if action == 2:
+                    a = [-1, -1, 1]
+                if action == 3:
+                    a = [-1, 0, -1]
+                if action == 4:
+                    a = [-1, 0, 0]
+                if action == 5:
+                    a = [-1, 0, 1]
+                if action == 6:
+                    a = [-1, 1, -1]
+                if action == 7:
+                    a = [-1, 1, 0]
+                if action == 8:
+                    a = [-1, 1, 1]
+                if action == 9:
+                    a = [0, -1, -1]
+                if action == 10:
+                    a = [0, -1, 0]
+                if action == 11:
+                    a = [0, -1, 1]
+                if action == 12:
+                    a = [0, 0, -1]
+                if action == 13:
+                    a = [0, 0, 0]
+                if action == 14:
+                    a = [0, 0, 1]
+                if action == 15:
+                    a = [0, 1, -1]
+                if action == 16:
+                    a = [0, 1, 0]
+                if action == 17:
+                    a = [0, 1, 1]
+                if action == 18:
+                    a = [1, -1, -1]
+                if action == 19:
+                    a = [1, -1, 0]
+                if action == 20:
+                    a = [1, -1, 1]
+                if action == 21:
+                    a = [1, 0, -1]
+                if action == 22:
+                    a = [1, 0, 0]
+                if action == 23:
+                    a = [1, 0, 1]
+                if action == 24:
+                    a = [1, 1, -1]
+                if action == 25:
+                    a = [1, 1, 0]
+                if action == 26:
+                    a = [1, 1, 1]
+
                 old_action = action                    
 
-            field += np.array([dh*h0/da, 0e0, 0e0])      
+            field += np.array([dh*a[0]/da, dh*a[1]/da, dh*a[2]/da])      
 
             time = i*dt
 
@@ -155,9 +207,64 @@ def main():
 
             if i % da == 0 and i != 0:
                 state = np.concatenate([dynamics.m, field/1e4])
-                action = agent.get_action(state, epsilon)
-                h0 = action - 1
 
+                action = agent.get_action(state, epsilon)
+
+                if action == 0:
+                    a = [-1, -1, -1]
+                if action == 1:
+                    a = [-1, -1, 0]
+                if action == 2:
+                    a = [-1, -1, 1]
+                if action == 3:
+                    a = [-1, 0, -1]
+                if action == 4:
+                    a = [-1, 0, 0]
+                if action == 5:
+                    a = [-1, 0, 1]
+                if action == 6:
+                    a = [-1, 1, -1]
+                if action == 7:
+                    a = [-1, 1, 0]
+                if action == 8:
+                    a = [-1, 1, 1]
+                if action == 9:
+                    a = [0, -1, -1]
+                if action == 10:
+                    a = [0, -1, 0]
+                if action == 11:
+                    a = [0, -1, 1]
+                if action == 12:
+                    a = [0, 0, -1]
+                if action == 13:
+                    a = [0, 0, 0]
+                if action == 14:
+                    a = [0, 0, 1]
+                if action == 15:
+                    a = [0, 1, -1]
+                if action == 16:
+                    a = [0, 1, 0]
+                if action == 17:
+                    a = [0, 1, 1]
+                if action == 18:
+                    a = [1, -1, -1]
+                if action == 19:
+                    a = [1, -1, 0]
+                if action == 20:
+                    a = [1, -1, 1]
+                if action == 21:
+                    a = [1, 0, -1]
+                if action == 22:
+                    a = [1, 0, 0]
+                if action == 23:
+                    a = [1, 0, 1]
+                if action == 24:
+                    a = [1, 1, -1]
+                if action == 25:
+                    a = [1, 1, 0]
+                if action == 26:
+                    a = [1, 1, 1]
+                    
                 reward = - dynamics.m[2]
                 total_reward += reward
 
@@ -178,7 +285,7 @@ def main():
             agent.sync_qnet()
 
         if total_reward > high_reward:
-            s.save_episode(episode, t, m, h, "fig_DQN_X")
+            s.save_episode(episode, t, m, h, "fig_dqn_xyz")
             high_reward = total_reward
 
         print("reward = {:.9f}".format(total_reward))
@@ -188,9 +295,9 @@ def main():
         if episode > sync_interval:
             ave_loss = total_loss / cnt
             loss_history.append(ave_loss)
-            s.save_loss_history(loss_history, "fig_DQN_X")
+            s.save_loss_history(loss_history, "fig_dqn_xyz")
 
-        s.save_reward_history(reward_history, "fig_DQN_X")
+        s.save_reward_history(reward_history, "fig_dqn_xyz")
 
 
 if __name__ == '__main__':
