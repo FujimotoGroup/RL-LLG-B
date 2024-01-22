@@ -10,7 +10,7 @@ class Magnetization:
         self.m = m0
 
 class Dynamics(Magnetization):
-    def __init__(self, dt:float, alphaG:float, uniaxial_anisotropy:float, m0:np.array, eps:float = 1e-9, limit:int = 10000):
+    def __init__(self, dt:float, alphaG:float, anisotropy:np.array, m0:np.array, eps:float = 1e-9, limit:int = 10000):
         super().__init__(m0)
 
         self.t0 = 1e-10 # [s]
@@ -20,11 +20,11 @@ class Dynamics(Magnetization):
 
         self.dt = dt / self.t0
         self.alphaG = alphaG
-        self.anisotrpy = uniaxial_anisotropy
+        self.anisotropy = anisotropy
         self.limit = limit
 
     def LLG(self, magnetization:np.array, field:np.array) -> np.array:
-        H = np.array([0e0, 0e0, self.anisotrpy*self.m[2]]) + field
+        H = np.array([self.anisotropy[0]*self.m[0], self.anisotropy[1]*self.m[1], self.anisotropy[2]*self.m[2]]) + field
         g = self.gamma*self.t0 / (1e0 + self.alphaG**2)
         mxH = np.cross(magnetization, H)
         m = - g*mxH - g*self.alphaG * np.cross(magnetization, mxH)
@@ -56,11 +56,15 @@ def plot(t:list, m:list, h:list, issave:bool=False):
     axes[0].plot(t, m[:,0], label='m_x')
     axes[0].plot(t, m[:,1], label='m_y')
     axes[0].plot(t, m[:,2], label='m_z')
+    axes[0].set_xlabel('Time [s]')
+    axes[0].set_ylabel('Magnetization')
     axes[0].legend()
 
     axes[1].plot(t, h[:,0], label='h_x')
     axes[1].plot(t, h[:,1], label='h_y')
     axes[1].plot(t, h[:,2], label='h_z')
+    axes[1].set_xlabel('Time [s]')
+    axes[1].set_ylabel('Magnetic Field [Oe]')
     axes[1].legend()
 
     if not(issave):
@@ -77,7 +81,7 @@ def save_reward_history(reward_history:list, directory:str):
     reward_history_array = np.array(reward_history)
     episodes = np.arange(len(reward_history))
 
-    slice_num = 10
+    slice_num = 20
     average = [ reward_history_array[i:i+slice_num].mean() for i in episodes[::slice_num]]
 
     plt.xlabel('Episode')

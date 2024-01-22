@@ -184,25 +184,40 @@ def save_prob_value(episode:int, agent, directory:str):
     fig.savefig(directory+"/value_episode{:0=5}.png".format(episode), dpi=200)
     plt.close()
 
-def save_history(reward_history:list, lr_history:list, directory:str):
-    reward_history = np.array(reward_history)
-    lr_history = np.array(lr_history)
+#def save_history(reward_history:list, lr_history:list, directory:str):
+#    reward_history = np.array(reward_history)
+#    lr_history = np.array(lr_history)
+#    episodes = np.arange(len(reward_history))
+
+#    slice_num = 10
+#    average = [ reward_history[i:i+slice_num].mean() for i in episodes[::slice_num]]
+
+#    fig, axes = plt.subplots(1, 2, figsize=(16, 8))
+#    axes[0].set_xlabel('Episode')
+#    axes[0].set_ylabel('Total Reward')
+#    axes[0].plot(episodes, reward_history)
+#    axes[0].plot(episodes[::slice_num], average)
+
+#    axes[1].set_xlabel('Episode')
+#    axes[1].set_ylabel('learning rate')
+#    axes[1].set_yscale('log')
+#    axes[1].plot(episodes, lr_history)
+#    plt.show()
+#    fig.tight_layout()
+#    fig.savefig(directory+"/history.png", dpi=200)
+#    plt.close()
+
+def save_history(reward_history:list, directory:str):
+    reward_history_array = np.array(reward_history)
     episodes = np.arange(len(reward_history))
 
-    slice_num = 10
-    average = [ reward_history[i:i+slice_num].mean() for i in episodes[::slice_num]]
+    slice_num = 50
+    average = [ reward_history_array[i:i+slice_num].mean() for i in episodes[::slice_num]]
 
-    fig, axes = plt.subplots(1, 2, figsize=(16, 8))
-    axes[0].set_xlabel('Episode')
-    axes[0].set_ylabel('Total Reward')
-    axes[0].plot(episodes, reward_history)
-    axes[0].plot(episodes[::slice_num], average)
-
-    axes[1].set_xlabel('Episode')
-    axes[1].set_ylabel('learning rate')
-    axes[1].set_yscale('log')
-    axes[1].plot(episodes, lr_history)
+    plt.xlabel('Episode')
+    plt.ylabel('Total Reward')
+    plt.plot(range(len(reward_history)), reward_history)
+    plt.plot(episodes[::slice_num], average)
 #    plt.show()
-    fig.tight_layout()
-    fig.savefig(directory+"/history.png", dpi=200)
+    plt.savefig(directory+"/reward_history.png", dpi=200)
     plt.close()
