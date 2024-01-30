@@ -101,13 +101,13 @@ class DQNAgent:
 def main():
     episodes = 3000  # optional
     sync_interval = 20
-    directory = "xy_yhard_eqH"  # optional
+    directory = "xy_yhard2"  # optional
 
     dt = 5e-13 # [s]
-    t_limit = 26e-1 # [ns]  # optional
+    t_limit = 20e-1 # [ns]  # optional
     alphaG = 0.01
     anisotropy = np.array([0e0, -5400e0, 540e0]) # [Oe]  # optional
-    dh = 100/2 # [Oe]  # optional
+    dh = 100 # [Oe]  # optional
     da = 1e-1 # [ns]  # optional
     m0 = np.array([0e0, 0e0, 1e0])
 
