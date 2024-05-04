@@ -13,19 +13,21 @@ class Dynamics(Magnetization):
     def __init__(self, dt:float, alphaG:float, anisotropy:np.array, m0:np.array, eps:float = 1e-9, limit:int = 10000):
         super().__init__(m0)
 
-        self.t0 = 1e-10 # [s]
+#        self.t0 = 1e-10 # [s]
 #        self.gamma = 1.76e11 # [rad / T s]
         self.gamma = 1.76e7 # [rad / Oe s]
         self.eps = eps
 
-        self.dt = dt / self.t0
+#        self.dt = dt / self.t0
+        self.dt = dt
         self.alphaG = alphaG
         self.anisotropy = anisotropy
         self.limit = limit
 
     def LLG(self, magnetization:np.array, field:np.array) -> np.array:
         H = np.array([self.anisotropy[0]*self.m[0], self.anisotropy[1]*self.m[1], self.anisotropy[2]*self.m[2]]) + field
-        g = self.gamma*self.t0 / (1e0 + self.alphaG**2)
+#        g = self.gamma*self.t0 / (1e0 + self.alphaG**2)
+        g = self.gamma / (1e0 + self.alphaG**2)
         mxH = np.cross(magnetization, H)
         m = - g*mxH - g*self.alphaG * np.cross(magnetization, mxH)
         return m

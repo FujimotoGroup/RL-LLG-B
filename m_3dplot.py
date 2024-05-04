@@ -6,7 +6,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 m = np.loadtxt('m copy.txt')
-anisotropy = np.array([0e0, -5400e0, 540e0])
+anisotropy = np.array([0e0, 0e0, 540e0]) # optional
 
 #energy
 mx = np.arange(-1, 1, 0.01)
@@ -35,12 +35,15 @@ ax = fig.add_subplot(111, projection='3d')
 ax.set_xlabel("x", size = 14)
 ax.set_ylabel("y", size = 14)
 ax.set_zlabel("z", size = 14)
-ax.plot(m[:, 0], m[:, 1], m[:, 2], color = "red")
+ax.plot(m[:, 0], m[:, 1], m[:, 2], color = "blue")
 ax.set_xlim(-1, 1)
 ax.set_ylim(-1, 1)
 ax.set_zlim(-1, 1)
-ax.set_xticks([-1, -0.5, 0, 0.5, 1])
-ax.set_yticks([-1, -0.5, 0, 0.5, 1])
-ax.set_zticks([-1, -0.5, 0, 0.5, 1])
+#ax.set_xticks([-1, -0.5, 0, 0.5, 1])
+#ax.set_yticks([-1, -0.5, 0, 0.5, 1])
+#ax.set_zticks([-1, -0.5, 0, 0.5, 1])
+ax.set_xticks([-1, 0, 1])
+ax.set_yticks([-1, 0, 1])
+ax.set_zticks([-1, 0, 1])
 plt.show() 
 plt.close()

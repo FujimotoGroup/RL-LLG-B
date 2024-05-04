@@ -2,6 +2,7 @@ from copy import copy
 from copy import deepcopy
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 from dezero import Model
 from dezero import optimizers
 from dezero import Variable
@@ -101,31 +102,34 @@ class DQNAgent:
 def main():
     episodes = 1000  # optional
     sync_interval = 20
-    directory = "x_0.8t"  # optional
+    directory = "test"  # optional
+    os.mkdir(directory)
 
-    dt = 5e-13 # [s]
-    t_limit = 16e-1 # [ns]  # optional
-    alphaG = 0.01
+    dt = 5e-13 # [s]  # optional
+    t_limit = 2e-9 # [s]  # optional
+    alphaG = 0 # optional
     anisotropy = np.array([0e0, 0e0, 540e0]) # [Oe]  # optional
+    ani_norm = np.linalg.norm(anisotropy, ord=2)
     dh = 100 # [Oe]  # optional
-    da = 1e-1 # [ns]  # optional
+    da = 1e-10 # [s]  # optional
     m0 = np.array([0e0, 0e0, 1e0])
 
     agent = DQNAgent()
     reward_history = []
-    high_reward = -50
+    best_reward = -500
     loss_history = []
 
     for episode in range(episodes):
         print("episode:{:>4}".format(episode), end=":")
-        dynamics = s.Dynamics(dt, alphaG, anisotropy, m0, limit=t_limit*2e3+1)
+#        dynamics = s.Dynamics(dt, alphaG, anisotropy, m0, limit=t_limit*2e3+1)
+        dynamics = s.Dynamics(dt, alphaG, anisotropy, m0, limit=t_limit/dt+1)
 
         t = []
         m = []
         h = []
 
         epsilon = 0.1
-        if episode > (episodes-50):
+        if episode > (episodes-100):
             epsilon = 0
 
         old_m = np.array([0e0, 0e0, 1e0])
@@ -143,24 +147,26 @@ def main():
                 h0 = action - 1
                 old_action = action                    
 
-            field += np.array([dh*h0/(da*2000), 0e0, 0e0])      
+#            field += np.array([dh*h0/(da*2000), 0e0, 0e0])
+            field += np.array([dh*h0*dt/da, 0e0, 0e0])
 
             time = i*dt
 
             dynamics.RungeKutta(field)
 
-            if i % 10 == 0:
-#                reward += - dynamics.m[2] / (da/10)
-                t.append(time)
-                m.append(dynamics.m)
-                h.append(copy(field))
+#            if i % 10 == 0:
+            t.append(time)
+            m.append(dynamics.m)
+            h.append(copy(field))
 
-            if i % (da*2000) == 0 and i != 0:
+            if i % (da/dt) == 0 and i != 0:
                 state = np.concatenate([dynamics.m, field/1e4])
+#                state = np.concatenate([dynamics.m, field/(ani_norm*1e2)])
                 action = agent.get_action(state, epsilon)
                 h0 = action - 1
 
-                reward = - dynamics.m[2]
+#                reward = - dynamics.m[2]
+                reward = - dynamics.m[2]**3
                 total_reward += reward
 
                 if i == dynamics.limit - 1:
@@ -179,10 +185,10 @@ def main():
         if episode % sync_interval == 0:
             agent.sync_qnet()
 
-        if total_reward > high_reward:
+        if total_reward > best_reward:
             s.save_episode(episode, t, m, h, directory)
-            high_reward = total_reward
-            m_max = m
+            best_reward = total_reward
+            best_m = m
 
         print("reward = {:.9f}".format(total_reward))
 
@@ -195,9 +201,26 @@ def main():
 
         s.save_reward_history(reward_history, directory)
 
-    p.plot_energy(m_max, dynamics)
-    p.plot_3d(m_max)
-    np.savetxt('m.txt', m_max)
+#    p.plot_energy(m_max, dynamics)
+    p.plot_3d(best_m)
+    np.savetxt(directory+"/m.txt", best_m)
+    with open(directory+"/options.txt", mode='w') as f:
+        f.write('dt = ')
+        f.write(str(dt))
+        f.write('\nalphaG = ')
+        f.write(str(alphaG))
+        f.write('\nanisotropy = ')
+        f.write(str(anisotropy))
+        f.write('\ndH = ')
+        f.write(str(dh))
+        f.write('\nda = ')
+        f.write(str(da))
+        f.write('\nm0 = ')
+        f.write(str(m0))
+        f.write('\n\nreversal time = ')
+#        f.write(str(reversal_time))
+        f.write('\naverage reward = ')
+        f.write(str(best_reward/(t_limit/da)))
 
 
 if __name__ == '__main__':
