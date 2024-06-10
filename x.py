@@ -100,19 +100,20 @@ class DQNAgent:
 
 
 def main():
-    episodes = 1000  # optional
+    episodes = 500  # optional
     sync_interval = 20
-    directory = "test"  # optional
+    directory = "x_Kz=540_Ky=-540"  # optional
     os.mkdir(directory)
 
     dt = 5e-13 # [s]  # optional
     t_limit = 2e-9 # [s]  # optional
-    alphaG = 0 # optional
-    anisotropy = np.array([0e0, 0e0, 540e0]) # [Oe]  # optional
-    ani_norm = np.linalg.norm(anisotropy, ord=2)
+    alphaG = 0.01 # optional
+    anisotropy = np.array([0e0, -540e0, 540e0]) # [Oe]  # optional
+#    ani_norm = np.linalg.norm(anisotropy, ord=2)
     dh = 100 # [Oe]  # optional
     da = 1e-10 # [s]  # optional
     m0 = np.array([0e0, 0e0, 1e0])
+    b = 0
 
     agent = DQNAgent()
     reward_history = []
@@ -128,11 +129,14 @@ def main():
         m = []
         h = []
 
+
         epsilon = 0.1
-        if episode > (episodes-100):
+        if episode > episodes*0.9:
             epsilon = 0
 
         old_m = np.array([0e0, 0e0, 1e0])
+        old_mz = m0[2]
+        max_slope = -0.01
         reward = 0
         total_reward = 0
         total_loss = 0
@@ -158,10 +162,15 @@ def main():
             t.append(time)
             m.append(dynamics.m)
             h.append(copy(field))
+            slope = (dynamics.m[2]-old_mz) / dt
+            old_mz = dynamics.m[2]
+            if slope < max_slope:
+                max_slope = slope
+                b = dynamics.m[2] - slope*time 
 
             if i % (da/dt) == 0 and i != 0:
                 state = np.concatenate([dynamics.m, field/1e4])
-#                state = np.concatenate([dynamics.m, field/(ani_norm*1e2)])
+#                state = np.concatenate([dynamics.m, field/(ani_norm*100)])
                 action = agent.get_action(state, epsilon)
                 h0 = action - 1
 
@@ -185,10 +194,18 @@ def main():
         if episode % sync_interval == 0:
             agent.sync_qnet()
 
-        if total_reward > best_reward:
+        if episode % 50 == 0:
             s.save_episode(episode, t, m, h, directory)
+
+        if total_reward > best_reward:
+#            s.save_episode(episode, t, m, h, directory)
+            best_episode = episode + 1
             best_reward = total_reward
-            best_m = m
+            best_m = np.array(m)
+            best_h = np.array(h)
+            best_slope = max_slope
+            best_b = b
+            switting_time = (-1-best_b)/best_slope
 
         print("reward = {:.9f}".format(total_reward))
 
@@ -200,6 +217,19 @@ def main():
 #            s.save_loss_history(loss_history, directory)
 
         s.save_reward_history(reward_history, directory)
+
+    s.save_episode(episode, t, best_m, best_h, directory)
+
+    x = np.linspace(0, t_limit, 1000)
+    y = best_slope*x + best_b
+    plt.ylim(-1, 1)
+    plt.xlabel('Time [s]')
+    plt.ylabel('Magnetization')
+    plt.plot(np.array(t), best_m[:,2], color='green', label='m_z')
+    plt.plot(x, y, color='red', linestyle='dashed', label='connection')
+    plt.legend()
+    plt.savefig(directory+"/best.png", dpi=200)
+    plt.close()
 
 #    p.plot_energy(m_max, dynamics)
     p.plot_3d(best_m)
@@ -217,8 +247,10 @@ def main():
         f.write(str(da))
         f.write('\nm0 = ')
         f.write(str(m0))
-        f.write('\n\nreversal time = ')
-#        f.write(str(reversal_time))
+        f.write('\n\nepisode = ')
+        f.write(str(best_episode))
+        f.write('\nswitting time = ')
+        f.write(str(switting_time))
         f.write('\naverage reward = ')
         f.write(str(best_reward/(t_limit/da)))
 

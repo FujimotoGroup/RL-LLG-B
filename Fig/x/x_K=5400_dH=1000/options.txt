@@ -1,0 +1,9 @@
+dt = 5e-13
+alphaG = 0.01
+anisotropy = [   0.    0. 5400.]
+dH = 1000
+da = 1e-10
+m0 = [0. 0. 1.]
+
+switting time = 7.519510470552326e-10
+average reward = 0.42089834429821493

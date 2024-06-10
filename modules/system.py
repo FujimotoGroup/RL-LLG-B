@@ -25,7 +25,8 @@ class Dynamics(Magnetization):
         self.limit = limit
 
     def LLG(self, magnetization:np.array, field:np.array) -> np.array:
-        H = np.array([self.anisotropy[0]*self.m[0], self.anisotropy[1]*self.m[1], self.anisotropy[2]*self.m[2]]) + field
+#        H = np.array([self.anisotropy[0]*self.m[0], self.anisotropy[1]*self.m[1], self.anisotropy[2]*self.m[2]]) + field
+        H = self.anisotropy * magnetization + field
 #        g = self.gamma*self.t0 / (1e0 + self.alphaG**2)
         g = self.gamma / (1e0 + self.alphaG**2)
         mxH = np.cross(magnetization, H)
@@ -88,8 +89,9 @@ def save_reward_history(reward_history:list, directory:str):
 
     plt.xlabel('Episode')
     plt.ylabel('Total Reward')
-    plt.plot(range(len(reward_history)), reward_history)
-    plt.plot(episodes[::slice_num], average)
+    plt.plot(range(len(reward_history)), reward_history, label='Reward of 1 Episode')
+    plt.plot(episodes[::slice_num], average, label='Average Reward of 20 Episode')
+    plt.legend()
 #    plt.show()
     plt.savefig(directory+"/reward_history.png", dpi=200)
     plt.close()

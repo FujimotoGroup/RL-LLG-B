@@ -2,6 +2,7 @@ from copy import copy
 from copy import deepcopy
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 from dezero import Model
 from dezero import optimizers
 from dezero import Variable
@@ -99,36 +100,40 @@ class DQNAgent:
 
 
 def main():
-    episodes = 3000  # optional
+    episodes = 2000  # optional
     sync_interval = 20
-    directory = "xy_yhard2"  # optional
+    directory = "xy_2"  # optional
+    os.mkdir(directory)
 
     dt = 5e-13 # [s]
-    t_limit = 20e-1 # [ns]  # optional
+    t_limit = 2e-9 # [ns]  # optional
     alphaG = 0.01
-    anisotropy = np.array([0e0, -5400e0, 540e0]) # [Oe]  # optional
+    anisotropy = np.array([0e0, 0e0, 540e0]) # [Oe]  # optional
     dh = 100 # [Oe]  # optional
-    da = 1e-1 # [ns]  # optional
+    da = 1e-10 # [ns]  # optional
     m0 = np.array([0e0, 0e0, 1e0])
+    b = 0
 
     agent = DQNAgent()
     reward_history = []
-    high_reward = -50
+    best_reward = -500
     loss_history = []
 
     for episode in range(episodes):
         print("episode:{:>4}".format(episode), end=":")
-        dynamics = s.Dynamics(dt, alphaG, anisotropy, m0, limit=t_limit*2e3+1)
+        dynamics = s.Dynamics(dt, alphaG, anisotropy, m0, limit=t_limit/dt+1)
 
         t = []
         m = []
         h = []
 
         epsilon = 0.1
-        if episode > (episodes-50):
-            epsilon = 0
+#        if episode > episodes*0.9:
+#            epsilon = 0
 
         old_m = np.array([0e0, 0e0, 1e0])
+        old_mz = m0[2]
+        max_slope = -0.01
         reward = 0
         total_reward = 0
         total_loss = 0
@@ -160,19 +165,24 @@ def main():
                     a = [1, 1, 0]
                 old_action = action                    
 
-            field += dh * np.array(a) / (da*2000)   
+            field += dh*np.array(a)*dt/da   
 
             time = i*dt
 
             dynamics.RungeKutta(field)
 
-            if i % 10 == 0:
+#            if i % 10 == 0:
 #                reward += - dynamics.m[2] / (da/10)
-                t.append(time)
-                m.append(dynamics.m)
-                h.append(copy(field))
+            t.append(time)
+            m.append(dynamics.m)
+            h.append(copy(field))
+            slope = (dynamics.m[2]-old_mz) / dt
+            old_mz = dynamics.m[2]
+            if slope < max_slope:
+                max_slope = slope
+                b = dynamics.m[2] - slope*time
 
-            if i % (da*2000) == 0 and i != 0:
+            if i % (da/dt) == 0 and i != 0:
                 state = np.concatenate([dynamics.m, field/1e4])
                 action = agent.get_action(state, epsilon)
                 if action == 0:
@@ -194,7 +204,7 @@ def main():
                 if action == 8:
                     a = [1, 1, 0]
 
-                reward = - dynamics.m[2]
+                reward = - dynamics.m[2]**3
                 total_reward += reward
 
                 if i == dynamics.limit - 1:
@@ -213,10 +223,17 @@ def main():
         if episode % sync_interval == 0:
             agent.sync_qnet()
 
-        if total_reward > high_reward:
+        if episode % 50 == 0:
             s.save_episode(episode, t, m, h, directory)
-            high_reward = total_reward
-            m_max = m
+
+        if total_reward > best_reward:
+            best_episode = episode + 1
+            best_reward = total_reward
+            best_m = np.array(m)
+            best_h = np.array(h)
+            best_slope = max_slope
+            best_b = b
+            switting_time = (-1-best_b)/best_slope
 
         print("reward = {:.9f}".format(total_reward))
 
@@ -228,10 +245,42 @@ def main():
 #            s.save_loss_history(loss_history, directory)
 
         s.save_reward_history(reward_history, directory)
-    
-    p.plot_energy(m_max, dynamics)
-    p.plot_3d(m_max)
-    np.savetxt('m.txt', m_max)
+
+    s.save_episode(episode, t, best_m, best_h, directory)
+
+    x = np.linspace(0, t_limit, 1000)
+    y = best_slope*x + best_b
+    plt.ylim(-1, 1)
+    plt.xlabel('Time [s]')
+    plt.ylabel('Magnetization')
+    plt.plot(np.array(t), best_m[:,2], color='green', label='m_z')
+    plt.plot(x, y, color='red', linestyle='dashed', label='connection')
+    plt.legend()
+    plt.savefig(directory+"/best.png", dpi=200)
+    plt.close()
+
+#    p.plot_energy(m_max, dynamics)
+    p.plot_3d(best_m)
+    np.savetxt(directory+"/m.txt", best_m)
+    with open(directory+"/options.txt", mode='w') as f:
+        f.write('dt = ')
+        f.write(str(dt))
+        f.write('\nalphaG = ')
+        f.write(str(alphaG))
+        f.write('\nanisotropy = ')
+        f.write(str(anisotropy))
+        f.write('\ndH = ')
+        f.write(str(dh))
+        f.write('\nda = ')
+        f.write(str(da))
+        f.write('\nm0 = ')
+        f.write(str(m0))
+        f.write('\n\nepisode = ')
+        f.write(str(best_episode))
+        f.write('\nswitting time = ')
+        f.write(str(switting_time))
+        f.write('\naverage reward = ')
+        f.write(str(best_reward/(t_limit/da)))
 
 
 if __name__ == '__main__':
