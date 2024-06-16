@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-
+import japanize_matplotlib
 
 #gamma = 1.76e11
 gamma = 1.76e7
@@ -55,11 +55,11 @@ def RungeKutta2(S:float, B:np.array, n_x:float, n_y:float, dt:float):
 def main():
     t0 = 0e0
     t1 = 5e-10
-    dH = 500
+    dH = 5000
     B0 = dH/t1
     dt = 5e-13
     n = int(t1/dt)
-    K = 540
+    K = 5400
 
     s = np.empty((n,3))
     B = np.empty((n,3))
@@ -83,20 +83,20 @@ def main():
 
     fig = plt.figure(figsize = (8, 8))
     ax = fig.add_subplot(111, projection='3d')
-    ax.set_xlabel("x", size = 14)
-    ax.set_ylabel("y", size = 14)
-    ax.set_zlabel("z", size = 14)
-    ax.plot(s[:,0], s[:,1], s[:,2], color = "red", label='m')
-    ax.plot(analytic[:,0], analytic[:,1], analytic[:,2], color = "blue", label='m_linear')
+    ax.set_xlabel("mx", size = 14)
+    ax.set_ylabel("my", size = 14)
+    ax.set_zlabel("mz", size = 14)
+    ax.plot(s[:,0], s[:,1], s[:,2], color = "red", label='数値計算')
+    ax.plot(analytic[:,0], analytic[:,1], analytic[:,2], color = "blue", label='線形近似式')
     ax.legend()
     plt.show()
     plt.close
 
     fig = plt.figure(figsize = (8, 8))
     ax = fig.add_subplot(111, projection='3d')
-    ax.set_xlabel("x", size = 14)
-    ax.set_ylabel("y", size = 14)
-    ax.set_zlabel("z", size = 14)
+    ax.set_xlabel("Hx", size = 14)
+    ax.set_ylabel("Hy", size = 14)
+    ax.set_zlabel("Hz", size = 14)
     ax.plot(B[:,0], B[:,1], B[:,2], color = "blue")
     plt.show()
     plt.close

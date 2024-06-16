@@ -102,13 +102,13 @@ class DQNAgent:
 def main():
     episodes = 500  # optional
     sync_interval = 20
-    directory = "x_K=540_dH=100_alphaG=0.01_r^3"  # optional
+    directory = "x_Kz=540_Ky=-540"  # optional
     os.mkdir(directory)
 
     dt = 5e-13 # [s]  # optional
     t_limit = 2e-9 # [s]  # optional
     alphaG = 0.01 # optional
-    anisotropy = np.array([0e0, 0e0, 540e0]) # [Oe]  # optional
+    anisotropy = np.array([0e0, -540e0, 540e0]) # [Oe]  # optional
 #    ani_norm = np.linalg.norm(anisotropy, ord=2)
     dh = 100 # [Oe]  # optional
     da = 1e-10 # [s]  # optional
@@ -194,10 +194,15 @@ def main():
         if episode % sync_interval == 0:
             agent.sync_qnet()
 
-        if total_reward > best_reward:
+        if episode % 50 == 0:
             s.save_episode(episode, t, m, h, directory)
+
+        if total_reward > best_reward:
+#            s.save_episode(episode, t, m, h, directory)
+            best_episode = episode + 1
             best_reward = total_reward
             best_m = np.array(m)
+            best_h = np.array(h)
             best_slope = max_slope
             best_b = b
             switting_time = (-1-best_b)/best_slope
@@ -212,6 +217,8 @@ def main():
 #            s.save_loss_history(loss_history, directory)
 
         s.save_reward_history(reward_history, directory)
+
+    s.save_episode(episode, t, best_m, best_h, directory)
 
     x = np.linspace(0, t_limit, 1000)
     y = best_slope*x + best_b
@@ -240,7 +247,9 @@ def main():
         f.write(str(da))
         f.write('\nm0 = ')
         f.write(str(m0))
-        f.write('\n\nswitting time = ')
+        f.write('\n\nepisode = ')
+        f.write(str(best_episode))
+        f.write('\nswitting time = ')
         f.write(str(switting_time))
         f.write('\naverage reward = ')
         f.write(str(best_reward/(t_limit/da)))

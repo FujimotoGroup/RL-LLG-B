@@ -5,6 +5,6 @@ dH = 100
 da = 1e-10
 m0 = [0. 0. 1.]
 
-episode = 1867
+episode = 1542
 switting time = 4.255778075431748e-10
-average reward = 0.7164639137353326
+average reward = 0.7208241507571772

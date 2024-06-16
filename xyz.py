@@ -126,6 +126,7 @@ def main():
         t = []
         m = []
         h = []
+        Heff = []
 
         epsilon = 0.1
         if episode > episodes*0.9:
@@ -212,6 +213,7 @@ def main():
             t.append(time)
             m.append(dynamics.m)
             h.append(copy(field))
+            Heff.append(anisotropy*dynamics.m + field)
             slope = (dynamics.m[2]-old_mz) / dt
             old_mz = dynamics.m[2]
             if slope < max_slope:
@@ -303,6 +305,7 @@ def main():
             best_reward = total_reward
             best_m = np.array(m)
             best_h = np.array(h)
+            best_Heff = np.array(Heff)
             best_slope = max_slope
             best_b = b
             switting_time = (-1-best_b)/best_slope
@@ -330,6 +333,15 @@ def main():
     plt.legend()
     plt.savefig(directory+"/best.png", dpi=200)
     plt.close()
+
+    fig = plt.figure(figsize = (8, 8))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_xlabel("Hx", size = 14)
+    ax.set_ylabel("Hy", size = 14)
+    ax.set_zlabel("Hz", size = 14)
+    ax.plot(best_Heff[:,0], best_Heff[:,1], best_Heff[:,2], color = "blue")
+    plt.show()
+    plt.close
 
 #    p.plot_energy(m_max, dynamics)
     p.plot_3d(best_m)

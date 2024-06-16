@@ -5,7 +5,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
-m = np.loadtxt('m copy.txt')
+m = np.loadtxt('m.txt')
 anisotropy = np.array([0e0, 0e0, 540e0]) # optional
 
 #energy

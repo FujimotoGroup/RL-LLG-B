@@ -102,13 +102,13 @@ class DQNAgent:
 def main():
     episodes = 500  # optional
     sync_interval = 20
-    directory = "x_Kz=540_Ky=-540"  # optional
+    directory = "x"  # optional
     os.mkdir(directory)
 
     dt = 5e-13 # [s]  # optional
     t_limit = 2e-9 # [s]  # optional
     alphaG = 0.01 # optional
-    anisotropy = np.array([0e0, -540e0, 540e0]) # [Oe]  # optional
+    anisotropy = np.array([0e0, 0e0, 540e0]) # [Oe]  # optional
 #    ani_norm = np.linalg.norm(anisotropy, ord=2)
     dh = 100 # [Oe]  # optional
     da = 1e-10 # [s]  # optional
@@ -122,13 +122,12 @@ def main():
 
     for episode in range(episodes):
         print("episode:{:>4}".format(episode), end=":")
-#        dynamics = s.Dynamics(dt, alphaG, anisotropy, m0, limit=t_limit*2e3+1)
         dynamics = s.Dynamics(dt, alphaG, anisotropy, m0, limit=t_limit/dt+1)
 
         t = []
         m = []
         h = []
-
+        Heff = []
 
         epsilon = 0.1
         if episode > episodes*0.9:
@@ -151,7 +150,6 @@ def main():
                 h0 = action - 1
                 old_action = action                    
 
-#            field += np.array([dh*h0/(da*2000), 0e0, 0e0])
             field += np.array([dh*h0*dt/da, 0e0, 0e0])
 
             time = i*dt
@@ -162,6 +160,7 @@ def main():
             t.append(time)
             m.append(dynamics.m)
             h.append(copy(field))
+            Heff.append(anisotropy*dynamics.m + field)
             slope = (dynamics.m[2]-old_mz) / dt
             old_mz = dynamics.m[2]
             if slope < max_slope:
@@ -194,15 +193,15 @@ def main():
         if episode % sync_interval == 0:
             agent.sync_qnet()
 
-        if episode % 50 == 0:
+        if episode % 10 == 0:
             s.save_episode(episode, t, m, h, directory)
 
         if total_reward > best_reward:
-#            s.save_episode(episode, t, m, h, directory)
             best_episode = episode + 1
             best_reward = total_reward
             best_m = np.array(m)
             best_h = np.array(h)
+            best_Heff = np.array(Heff)
             best_slope = max_slope
             best_b = b
             switting_time = (-1-best_b)/best_slope
@@ -230,6 +229,15 @@ def main():
     plt.legend()
     plt.savefig(directory+"/best.png", dpi=200)
     plt.close()
+
+    fig = plt.figure(figsize = (8, 8))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_xlabel("Hx", size = 14)
+    ax.set_ylabel("Hy", size = 14)
+    ax.set_zlabel("Hz", size = 14)
+    ax.plot(best_Heff[:,0], best_Heff[:,1], best_Heff[:,2], color = "blue")
+    plt.show()
+    plt.close
 
 #    p.plot_energy(m_max, dynamics)
     p.plot_3d(best_m)
