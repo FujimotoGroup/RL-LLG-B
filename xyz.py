@@ -126,7 +126,7 @@ def main():
         t = []
         m = []
         h = []
-        Heff = []
+        Hani = []
 
         epsilon = 0.1
         if episode > episodes*0.9:
@@ -213,7 +213,7 @@ def main():
             t.append(time)
             m.append(dynamics.m)
             h.append(copy(field))
-            Heff.append(anisotropy*dynamics.m + field)
+            Hani.append(anisotropy*dynamics.m)
             slope = (dynamics.m[2]-old_mz) / dt
             old_mz = dynamics.m[2]
             if slope < max_slope:
@@ -305,7 +305,7 @@ def main():
             best_reward = total_reward
             best_m = np.array(m)
             best_h = np.array(h)
-            best_Heff = np.array(Heff)
+            best_Hani = np.array(Hani)
             best_slope = max_slope
             best_b = b
             switting_time = (-1-best_b)/best_slope
@@ -334,14 +334,34 @@ def main():
     plt.savefig(directory+"/best.png", dpi=200)
     plt.close()
 
-    fig = plt.figure(figsize = (8, 8))
-    ax = fig.add_subplot(111, projection='3d')
-    ax.set_xlabel("Hx", size = 14)
-    ax.set_ylabel("Hy", size = 14)
-    ax.set_zlabel("Hz", size = 14)
-    ax.plot(best_Heff[:,0], best_Heff[:,1], best_Heff[:,2], color = "blue")
-    plt.show()
-    plt.close
+    fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+    if best_h.max() >= best_Hani.max():
+        y_max = best_h.max()
+    else:
+        y_max = best_Hani.max()
+    if best_h.min() <= best_Hani.min():
+        y_min = best_h.min()
+    else:
+        y_min = best_Hani.min()
+    axes[0].set_ylim([y_min, y_max])
+    axes[0].plot(t, best_h[:,0], label='h_x')
+    axes[0].plot(t, best_h[:,1], label='h_y')
+    axes[0].plot(t, best_h[:,2], label='h_z')
+    axes[0].set_xlabel('Time [s]')
+    axes[0].set_ylabel('external magnetic field [Oe]')
+    axes[0].legend()
+
+    axes[1].set_ylim([y_min, y_max])
+    axes[1].plot(t, best_Hani[:,0], label='ani_x')
+    axes[1].plot(t, best_Hani[:,1], label='ani_y')
+    axes[1].plot(t, best_Hani[:,2], label='ani_z')
+    axes[1].set_xlabel('Time [s]')
+    axes[1].set_ylabel('anisotropy [Oe]')
+    axes[1].legend()
+
+    fig.savefig(directory+"/field.png", dpi=200)
+    plt.close()
+    
 
 #    p.plot_energy(m_max, dynamics)
     p.plot_3d(best_m)
