@@ -10,18 +10,24 @@ class Magnetization:
         self.m = m0
 
 class Dynamics(Magnetization):
-    def __init__(self, dt:float, alphaG:float, anisotropy:np.array, H_shape, m0:np.array, eps:float = 1e-9):
+    def __init__(self, dt:float, alphaG:float, anisotropy:np.array, m0:np.array, eps:float = 1e-9, limit:int = 10000):
         super().__init__(m0)
 
+#        self.t0 = 1e-10 # [s]
+#        self.gamma = 1.76e11 # [rad / T s]
         self.gamma = 1.76e7 # [rad / Oe s]
         self.eps = eps
+
+#        self.dt = dt / self.t0
         self.dt = dt
         self.alphaG = alphaG
         self.anisotropy = anisotropy
-        self.H_shape = H_shape
+        self.limit = limit
 
     def LLG(self, magnetization:np.array, field:np.array) -> np.array:
-        H = self.anisotropy * magnetization + field - self.H_shape * magnetization
+#        H = np.array([self.anisotropy[0]*self.m[0], self.anisotropy[1]*self.m[1], self.anisotropy[2]*self.m[2]]) + field
+        H = self.anisotropy * magnetization + field
+#        g = self.gamma*self.t0 / (1e0 + self.alphaG**2)
         g = self.gamma / (1e0 + self.alphaG**2)
         mxH = np.cross(magnetization, H)
         m = - g*mxH - g*self.alphaG * np.cross(magnetization, mxH)
@@ -71,7 +77,7 @@ def plot(t:list, m:list, h:list, issave:bool=False):
 
 def save_episode(episode:int, t:list, m:list, h:list, directory:str):
     fig = plot(t,m,h, issave=True)
-    fig.savefig(directory+"/episode{:0=5}.png".format(episode), dpi=200)
+    fig.savefig(directory+"/episode{:0=5}.png".format(episode+1), dpi=200)
     plt.close()
 
 def save_reward_history(reward_history:list, directory:str):
@@ -86,6 +92,7 @@ def save_reward_history(reward_history:list, directory:str):
     plt.plot(range(len(reward_history)), reward_history, label='Reward of 1 Episode')
     plt.plot(episodes[::slice_num], average, label='Average Reward of 20 Episode')
     plt.legend()
+#    plt.show()
     plt.savefig(directory+"/reward_history.png", dpi=200)
     plt.close()
 
@@ -93,6 +100,7 @@ def save_loss_history(loss_history:list, directory:str):
     plt.xlabel('Episode')
     plt.ylabel('loss')
     plt.plot(range(len(loss_history)), loss_history)
+#    plt.show()
     plt.savefig(directory+"/loss_history.png", dpi=200)
     plt.close()
 
@@ -100,6 +108,7 @@ def save_loss_pi_history(loss_pi_history:list, directory:str):
     plt.xlabel('Episode')
     plt.ylabel('loss_pi')
     plt.plot(range(len(loss_pi_history)), loss_pi_history)
+#    plt.show()
     plt.savefig(directory+"/loss_pi_history.png", dpi=200)
     plt.close()
 

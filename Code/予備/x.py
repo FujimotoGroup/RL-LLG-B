@@ -41,7 +41,7 @@ class QNet(Model):
         self.l1 = L.Linear(128)
         self.l2 = L.Linear(128)
         self.l3 = L.Linear(128)
-        self.l4 = L.Linear(27)
+        self.l4 = L.Linear(3)
 
     def forward(self, x):
         x = F.relu(self.l1(x))
@@ -56,7 +56,7 @@ class DQNAgent:
         self.lr = 0.0005
         self.buffer_size = 10000
         self.batch_size = 32
-        self.action_size = 27
+        self.action_size = 3
 
         self.replay_buffer = ReplayBuffer(self.buffer_size, self.batch_size)
         self.qnet = QNet()
@@ -100,17 +100,18 @@ class DQNAgent:
 
 
 def main():
-    episodes = 5000  # optional
+    episodes = 500  # optional
     sync_interval = 20
-    directory = "xyz_dH=33"  # optional
+    directory = "test"  # optional
     os.mkdir(directory)
 
-    dt = 5e-13 # [s]
-    t_limit = 2e-9 # [ns]  # optional
-    alphaG = 0.01
+    dt = 5e-13 # [s]  # optional
+    t_limit = 2e-9 # [s]  # optional
+    alphaG = 0.01 # optional
     anisotropy = np.array([0e0, 0e0, 540e0]) # [Oe]  # optional
-    dh = 100/3 # [Oe]  # optional
-    da = 1e-10 # [ns]  # optional
+#    ani_norm = np.linalg.norm(anisotropy, ord=2)
+    dh = 100 # [Oe]  # optional
+    da = 1e-10 # [s]  # optional
     m0 = np.array([0e0, 0e0, 1e0])
     b = 0
 
@@ -146,70 +147,16 @@ def main():
         for i in np.arange(dynamics.limit):
             if i == 0:
                 action = agent.get_action(old_state, epsilon)
-                if action == 0:
-                    a = [-1, -1, -1]
-                if action == 1:
-                    a = [-1, -1, 0]
-                if action == 2:
-                    a = [-1, -1, 1]
-                if action == 3:
-                    a = [-1, 0, -1]
-                if action == 4:
-                    a = [-1, 0, 0]
-                if action == 5:
-                    a = [-1, 0, 1]
-                if action == 6:
-                    a = [-1, 1, -1]
-                if action == 7:
-                    a = [-1, 1, 0]
-                if action == 8:
-                    a = [-1, 1, 1]
-                if action == 9:
-                    a = [0, -1, -1]
-                if action == 10:
-                    a = [0, -1, 0]
-                if action == 11:
-                    a = [0, -1, 1]
-                if action == 12:
-                    a = [0, 0, -1]
-                if action == 13:
-                    a = [0, 0, 0]
-                if action == 14:
-                    a = [0, 0, 1]
-                if action == 15:
-                    a = [0, 1, -1]
-                if action == 16:
-                    a = [0, 1, 0]
-                if action == 17:
-                    a = [0, 1, 1]
-                if action == 18:
-                    a = [1, -1, -1]
-                if action == 19:
-                    a = [1, -1, 0]
-                if action == 20:
-                    a = [1, -1, 1]
-                if action == 21:
-                    a = [1, 0, -1]
-                if action == 22:
-                    a = [1, 0, 0]
-                if action == 23:
-                    a = [1, 0, 1]
-                if action == 24:
-                    a = [1, 1, -1]
-                if action == 25:
-                    a = [1, 1, 0]
-                if action == 26:
-                    a = [1, 1, 1]
+                h0 = action - 1
                 old_action = action                    
 
-            field += dh*np.array(a)*dt/da   
+            field += np.array([dh*h0*dt/da, 0e0, 0e0])
 
             time = i*dt
 
             dynamics.RungeKutta(field)
 
 #            if i % 10 == 0:
-#                reward += - dynamics.m[2] / (da/10)
             t.append(time)
             m.append(dynamics.m)
             h.append(copy(field))
@@ -222,62 +169,11 @@ def main():
 
             if i % (da/dt) == 0 and i != 0:
                 state = np.concatenate([dynamics.m, field/1e4])
+#                state = np.concatenate([dynamics.m, field/(ani_norm*100)])
                 action = agent.get_action(state, epsilon)
-                if action == 0:
-                    a = [-1, -1, -1]
-                if action == 1:
-                    a = [-1, -1, 0]
-                if action == 2:
-                    a = [-1, -1, 1]
-                if action == 3:
-                    a = [-1, 0, -1]
-                if action == 4:
-                    a = [-1, 0, 0]
-                if action == 5:
-                    a = [-1, 0, 1]
-                if action == 6:
-                    a = [-1, 1, -1]
-                if action == 7:
-                    a = [-1, 1, 0]
-                if action == 8:
-                    a = [-1, 1, 1]
-                if action == 9:
-                    a = [0, -1, -1]
-                if action == 10:
-                    a = [0, -1, 0]
-                if action == 11:
-                    a = [0, -1, 1]
-                if action == 12:
-                    a = [0, 0, -1]
-                if action == 13:
-                    a = [0, 0, 0]
-                if action == 14:
-                    a = [0, 0, 1]
-                if action == 15:
-                    a = [0, 1, -1]
-                if action == 16:
-                    a = [0, 1, 0]
-                if action == 17:
-                    a = [0, 1, 1]
-                if action == 18:
-                    a = [1, -1, -1]
-                if action == 19:
-                    a = [1, -1, 0]
-                if action == 20:
-                    a = [1, -1, 1]
-                if action == 21:
-                    a = [1, 0, -1]
-                if action == 22:
-                    a = [1, 0, 0]
-                if action == 23:
-                    a = [1, 0, 1]
-                if action == 24:
-                    a = [1, 1, -1]
-                if action == 25:
-                    a = [1, 1, 0]
-                if action == 26:
-                    a = [1, 1, 1]
+                h0 = action - 1
 
+#                reward = - dynamics.m[2]
                 reward = - dynamics.m[2]**3
                 total_reward += reward
 
@@ -297,7 +193,7 @@ def main():
         if episode % sync_interval == 0:
             agent.sync_qnet()
 
-        if episode % 100 == 0:
+        if episode % 10 == 0:
             s.save_episode(episode, t, m, h, directory)
 
         if total_reward > best_reward:
@@ -321,7 +217,7 @@ def main():
 
         s.save_reward_history(reward_history, directory)
 
-    s.save_episode(episode+1, t, best_m, best_h, directory)
+    s.save_episode(episode, t, best_m, best_h, directory)
 
     x = np.linspace(0, t_limit, 1000)
     y = best_slope*x + best_b
@@ -361,7 +257,7 @@ def main():
 
     fig.savefig(directory+"/field.png", dpi=200)
     plt.close()
-    
+
 
 #    p.plot_energy(m_max, dynamics)
     p.plot_3d(best_m)

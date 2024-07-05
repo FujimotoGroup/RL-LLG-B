@@ -41,7 +41,7 @@ class QNet(Model):
         self.l1 = L.Linear(128)
         self.l2 = L.Linear(128)
         self.l3 = L.Linear(128)
-        self.l4 = L.Linear(27)
+        self.l4 = L.Linear(3)
 
     def forward(self, x):
         x = F.relu(self.l1(x))
@@ -56,7 +56,7 @@ class DQNAgent:
         self.lr = 0.0005
         self.buffer_size = 10000
         self.batch_size = 32
-        self.action_size = 27
+        self.action_size = 3
 
         self.replay_buffer = ReplayBuffer(self.buffer_size, self.batch_size)
         self.qnet = QNet()
@@ -100,18 +100,20 @@ class DQNAgent:
 
 
 def main():
-    episodes = 5000  # optional
-    sync_interval = 20
-    directory = "xyz_dH=33"  # optional
+    episodes = 500  # エピソード数
+    sync_interval = 20  #　同期間隔
+    directory = "test4"  # ファイル名
     os.mkdir(directory)
 
-    dt = 5e-13 # [s]
-    t_limit = 2e-9 # [ns]  # optional
-    alphaG = 0.01
-    anisotropy = np.array([0e0, 0e0, 540e0]) # [Oe]  # optional
-    dh = 100/3 # [Oe]  # optional
-    da = 1e-10 # [ns]  # optional
-    m0 = np.array([0e0, 0e0, 1e0])
+    t_limit = 1e-9 # [s]  # 終了時間
+    dt = t_limit / 1e3
+    limit = int(t_limit / dt)
+    alphaG = 0.008 # ギルバート減衰定数
+    anisotropy = np.array([0e0, 0e0, 0e0]) # [Oe]  # 異方性
+    H_shape = np.array([4*np.pi*0.012*1000, 4*np.pi*0.98*1000, 4*np.pi*0.008*1000])  #  [Oe]  # 反磁場
+    dh = 100 # [Oe]  # 行動間隔ごとの磁場変化
+    da = 1e-10 # [s]  # 行動間隔  da<=1e-10
+    m0 = np.array([0e0, 0e0, 1e0])  #  初期磁化
     b = 0
 
     agent = DQNAgent()
@@ -121,7 +123,7 @@ def main():
 
     for episode in range(episodes):
         print("episode:{:>4}".format(episode), end=":")
-        dynamics = s.Dynamics(dt, alphaG, anisotropy, m0, limit=t_limit/dt+1)
+        dynamics = s.Dynamics(dt, alphaG, anisotropy, H_shape, m0)
 
         t = []
         m = []
@@ -141,75 +143,25 @@ def main():
         cnt = 0
         done = 1
         field = np.array([0e0, 0e0, 0e0])
+#        t.append(0)
+#        m.append(old_m)
+#        h.append(copy(field))
         old_state = np.concatenate([old_m, field])
 
-        for i in np.arange(dynamics.limit):
+#        for i in np.arange(limit):
+        for i in range(limit + 1):
             if i == 0:
                 action = agent.get_action(old_state, epsilon)
-                if action == 0:
-                    a = [-1, -1, -1]
-                if action == 1:
-                    a = [-1, -1, 0]
-                if action == 2:
-                    a = [-1, -1, 1]
-                if action == 3:
-                    a = [-1, 0, -1]
-                if action == 4:
-                    a = [-1, 0, 0]
-                if action == 5:
-                    a = [-1, 0, 1]
-                if action == 6:
-                    a = [-1, 1, -1]
-                if action == 7:
-                    a = [-1, 1, 0]
-                if action == 8:
-                    a = [-1, 1, 1]
-                if action == 9:
-                    a = [0, -1, -1]
-                if action == 10:
-                    a = [0, -1, 0]
-                if action == 11:
-                    a = [0, -1, 1]
-                if action == 12:
-                    a = [0, 0, -1]
-                if action == 13:
-                    a = [0, 0, 0]
-                if action == 14:
-                    a = [0, 0, 1]
-                if action == 15:
-                    a = [0, 1, -1]
-                if action == 16:
-                    a = [0, 1, 0]
-                if action == 17:
-                    a = [0, 1, 1]
-                if action == 18:
-                    a = [1, -1, -1]
-                if action == 19:
-                    a = [1, -1, 0]
-                if action == 20:
-                    a = [1, -1, 1]
-                if action == 21:
-                    a = [1, 0, -1]
-                if action == 22:
-                    a = [1, 0, 0]
-                if action == 23:
-                    a = [1, 0, 1]
-                if action == 24:
-                    a = [1, 1, -1]
-                if action == 25:
-                    a = [1, 1, 0]
-                if action == 26:
-                    a = [1, 1, 1]
+                h0 = action - 1
                 old_action = action                    
 
-            field += dh*np.array(a)*dt/da   
+            field += np.array([dh*h0*dt/da, 0e0, 0e0])
 
             time = i*dt
 
             dynamics.RungeKutta(field)
 
 #            if i % 10 == 0:
-#                reward += - dynamics.m[2] / (da/10)
             t.append(time)
             m.append(dynamics.m)
             h.append(copy(field))
@@ -223,65 +175,12 @@ def main():
             if i % (da/dt) == 0 and i != 0:
                 state = np.concatenate([dynamics.m, field/1e4])
                 action = agent.get_action(state, epsilon)
-                if action == 0:
-                    a = [-1, -1, -1]
-                if action == 1:
-                    a = [-1, -1, 0]
-                if action == 2:
-                    a = [-1, -1, 1]
-                if action == 3:
-                    a = [-1, 0, -1]
-                if action == 4:
-                    a = [-1, 0, 0]
-                if action == 5:
-                    a = [-1, 0, 1]
-                if action == 6:
-                    a = [-1, 1, -1]
-                if action == 7:
-                    a = [-1, 1, 0]
-                if action == 8:
-                    a = [-1, 1, 1]
-                if action == 9:
-                    a = [0, -1, -1]
-                if action == 10:
-                    a = [0, -1, 0]
-                if action == 11:
-                    a = [0, -1, 1]
-                if action == 12:
-                    a = [0, 0, -1]
-                if action == 13:
-                    a = [0, 0, 0]
-                if action == 14:
-                    a = [0, 0, 1]
-                if action == 15:
-                    a = [0, 1, -1]
-                if action == 16:
-                    a = [0, 1, 0]
-                if action == 17:
-                    a = [0, 1, 1]
-                if action == 18:
-                    a = [1, -1, -1]
-                if action == 19:
-                    a = [1, -1, 0]
-                if action == 20:
-                    a = [1, -1, 1]
-                if action == 21:
-                    a = [1, 0, -1]
-                if action == 22:
-                    a = [1, 0, 0]
-                if action == 23:
-                    a = [1, 0, 1]
-                if action == 24:
-                    a = [1, 1, -1]
-                if action == 25:
-                    a = [1, 1, 0]
-                if action == 26:
-                    a = [1, 1, 1]
+                h0 = action - 1
 
                 reward = - dynamics.m[2]**3
                 total_reward += reward
 
-                if i == dynamics.limit - 1:
+                if i == limit-1:
                     done = 0   
                              
                 loss = agent.update(old_state, old_action, reward, state, done)
@@ -297,7 +196,7 @@ def main():
         if episode % sync_interval == 0:
             agent.sync_qnet()
 
-        if episode % 100 == 0:
+        if episode % 10 == 0:
             s.save_episode(episode, t, m, h, directory)
 
         if total_reward > best_reward:
@@ -321,7 +220,7 @@ def main():
 
         s.save_reward_history(reward_history, directory)
 
-    s.save_episode(episode+1, t, best_m, best_h, directory)
+    s.save_episode(episode, t, best_m, best_h, directory)
 
     x = np.linspace(0, t_limit, 1000)
     y = best_slope*x + best_b
@@ -361,7 +260,7 @@ def main():
 
     fig.savefig(directory+"/field.png", dpi=200)
     plt.close()
-    
+
 
 #    p.plot_energy(m_max, dynamics)
     p.plot_3d(best_m)
@@ -373,13 +272,15 @@ def main():
         f.write(str(alphaG))
         f.write('\nanisotropy = ')
         f.write(str(anisotropy))
+        f.write('\nH_shape = ')
+        f.write(str(H_shape))
         f.write('\ndH = ')
         f.write(str(dh))
         f.write('\nda = ')
         f.write(str(da))
         f.write('\nm0 = ')
         f.write(str(m0))
-        f.write('\n\nepisode = ')
+        f.write('\n\nbest episode = ')
         f.write(str(best_episode))
         f.write('\nswitting time = ')
         f.write(str(switting_time))
