@@ -87,8 +87,8 @@ class DQNAgent:
         next_qs = self.qnet_target(next_state)
         next_q = next_qs.max(axis=1)
         next_q.unchain()
-#        target = reward + done * self.gamma * next_q
-        target = reward + self.gamma * next_q
+        target = reward + done * self.gamma * next_q
+#        target = reward + self.gamma * next_q
 
         loss = F.mean_squared_error(q, target)
 
@@ -100,17 +100,20 @@ class DQNAgent:
 
 
 def main():
-    episodes = 2000  # optional
+    episodes = 2000
+    record = 50
     sync_interval = 20
-    directory = "xy_2"  # optional
+    directory = "test"
     os.mkdir(directory)
 
-    dt = 5e-13 # [s]
-    t_limit = 2e-9 # [ns]  # optional
+    t_limit = 2e-9 # [s]
+    dt = t_limit / 1e3 # [s]
+    limit = int(t_limit / dt)
     alphaG = 0.01
-    anisotropy = np.array([0e0, 0e0, 540e0]) # [Oe]  # optional
-    dh = 100 # [Oe]  # optional
-    da = 1e-10 # [ns]  # optional
+    anisotropy = np.array([0e0, 0e0, 100e0]) # [Oe]
+    H_shape = np.array([0.012*10800*0, 0.98*10800*0, 0.008*10800*0]) # [Oe]
+    dh = 100 # [Oe]
+    da = 1e-10 # [s]
     m0 = np.array([0e0, 0e0, 1e0])
     b = 0
 
@@ -120,17 +123,18 @@ def main():
     loss_history = []
 
     for episode in range(episodes):
-        print("episode:{:>4}".format(episode), end=":")
-        dynamics = s.Dynamics(dt, alphaG, anisotropy, m0, limit=t_limit/dt+1)
+        print("episode:{:>4}".format(episode+1), end=":")
+        dynamics = s.Dynamics(dt, alphaG, anisotropy, H_shape, m0)
 
         t = []
         m = []
         h = []
         Hani = []
+        Hshape = []
 
-#        epsilon = 0.1
-        if episode > episodes*0.9:
-            epsilon = 0
+        epsilon = 0.1
+#        if episode > episodes*0.9:
+#            epsilon = 0
 
         old_m = np.array([0e0, 0e0, 1e0])
         old_mz = m0[2]
@@ -141,10 +145,15 @@ def main():
         cnt = 0
         done = 1
         field = np.array([0e0, 0e0, 0e0])
+        t.append(0)
+        m.append(old_m)
+        h.append(copy(field))
+        Hani.append(anisotropy*old_m)
+        Hshape.append(H_shape*old_m)
         old_state = np.concatenate([old_m, field])
 
-        for i in np.arange(dynamics.limit):
-            if i == 0:
+        for i in range(1, limit+1):
+            if i == 1:
                 action = agent.get_action(old_state, epsilon)
                 if action == 0:
                     a = [-1, -1, 0]
@@ -173,18 +182,18 @@ def main():
             dynamics.RungeKutta(field)
 
 #            if i % 10 == 0:
-#                reward += - dynamics.m[2] / (da/10)
             t.append(time)
             m.append(dynamics.m)
             h.append(copy(field))
             Hani.append(anisotropy*dynamics.m)
+            Hshape.append(H_shape*dynamics.m)
             slope = (dynamics.m[2]-old_mz) / dt
             old_mz = dynamics.m[2]
             if slope < max_slope:
                 max_slope = slope
                 b = dynamics.m[2] - slope*time
 
-            if i % (da/dt) == 0 and i != 0:
+            if i % (da/dt) == 0:
                 state = np.concatenate([dynamics.m, field/1e4])
                 action = agent.get_action(state, epsilon)
                 if action == 0:
@@ -209,7 +218,7 @@ def main():
                 reward = - dynamics.m[2]**3
                 total_reward += reward
 
-                if i == dynamics.limit - 1:
+                if i == limit+1:
                     done = 0   
                              
                 loss = agent.update(old_state, old_action, reward, state, done)
@@ -225,8 +234,8 @@ def main():
         if episode % sync_interval == 0:
             agent.sync_qnet()
 
-        if episode % 50 == 0:
-            s.save_episode(episode, t, m, h, directory)
+        if episode % record == record-1:
+            s.save_episode(episode+1, t, m, h, directory)
 
         if total_reward > best_reward:
             best_episode = episode + 1
@@ -234,6 +243,7 @@ def main():
             best_m = np.array(m)
             best_h = np.array(h)
             best_Hani = np.array(Hani)
+            best_Hshape = np.array(Hshape)
             best_slope = max_slope
             best_b = b
             switting_time = (-1-best_b)/best_slope
@@ -249,7 +259,7 @@ def main():
 
         s.save_reward_history(reward_history, directory)
 
-    s.save_episode(episode, t, best_m, best_h, directory)
+    s.save_episode(0, t, best_m, best_h, directory)
 
     x = np.linspace(0, t_limit, 1000)
     y = best_slope*x + best_b
@@ -259,24 +269,27 @@ def main():
     plt.plot(np.array(t), best_m[:,2], color='green', label='m_z')
     plt.plot(x, y, color='red', linestyle='dashed', label='connection')
     plt.legend()
-    plt.savefig(directory+"/best.png", dpi=200)
+    plt.savefig(directory+"/switting_time.png", dpi=200)
     plt.close()
 
-    fig, axes = plt.subplots(1, 2, figsize=(12, 6))
-    if best_h.max() >= best_Hani.max():
-        y_max = best_h.max()
-    else:
+    fig, axes = plt.subplots(1, 3, figsize=(12, 6))
+
+    if best_h.max() <= best_Hani.max():
         y_max = best_Hani.max()
-    if best_h.min() <= best_Hani.min():
-        y_min = best_h.min()
-    else:
+    if best_Hani.max() <= best_Hshape.max():
+        y_max = best_Hshape.max()
+    y_min = best_h.min()
+    if best_h.min() >= best_Hani.min():
         y_min = best_Hani.min()
+    if best_Hani.min() >= best_Hshape.min():
+        y_min = best_Hshape.min()
+
     axes[0].set_ylim([y_min, y_max])
     axes[0].plot(t, best_h[:,0], label='h_x')
     axes[0].plot(t, best_h[:,1], label='h_y')
     axes[0].plot(t, best_h[:,2], label='h_z')
     axes[0].set_xlabel('Time [s]')
-    axes[0].set_ylabel('external magnetic field [Oe]')
+    axes[0].set_ylabel('H_ext [Oe]')
     axes[0].legend()
 
     axes[1].set_ylim([y_min, y_max])
@@ -284,34 +297,42 @@ def main():
     axes[1].plot(t, best_Hani[:,1], label='ani_y')
     axes[1].plot(t, best_Hani[:,2], label='ani_z')
     axes[1].set_xlabel('Time [s]')
-    axes[1].set_ylabel('anisotropy [Oe]')
+    axes[1].set_ylabel('H_ani [Oe]')
     axes[1].legend()
+
+    axes[2].set_ylim([y_min, y_max])
+    axes[2].plot(t, best_Hshape[:,0], label='shape_x')
+    axes[2].plot(t, best_Hshape[:,1], label='shape_y')
+    axes[2].plot(t, best_Hshape[:,2], label='shape_z')
+    axes[2].set_xlabel('Time [s]')
+    axes[2].set_ylabel('H_shape [Oe]')
+    axes[2].legend()
 
     fig.savefig(directory+"/field.png", dpi=200)
     plt.close()
 
 
 #    p.plot_energy(m_max, dynamics)
-    p.plot_3d(best_m)
+#    p.plot_3d(best_m)
     np.savetxt(directory+"/m.txt", best_m)
     with open(directory+"/options.txt", mode='w') as f:
-        f.write('dt = ')
-        f.write(str(dt))
-        f.write('\nalphaG = ')
+        f.write('alphaG = ')
         f.write(str(alphaG))
         f.write('\nanisotropy = ')
         f.write(str(anisotropy))
-        f.write('\ndH = ')
+        f.write(' [Oe]\nH_shape = ')
+        f.write(str(H_shape))
+        f.write(' [Oe]\ndH = ')
         f.write(str(dh))
-        f.write('\nda = ')
+        f.write(' [Oe]\nda = ')
         f.write(str(da))
-        f.write('\nm0 = ')
+        f.write(' [s]\nm0 = ')
         f.write(str(m0))
-        f.write('\n\nepisode = ')
+        f.write('\n\nbest episode = ')
         f.write(str(best_episode))
         f.write('\nswitting time = ')
         f.write(str(switting_time))
-        f.write('\naverage reward = ')
+        f.write(' [s]\naverage reward = ')
         f.write(str(best_reward/(t_limit/da)))
 
 

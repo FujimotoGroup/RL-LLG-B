@@ -87,8 +87,8 @@ class DQNAgent:
         next_qs = self.qnet_target(next_state)
         next_q = next_qs.max(axis=1)
         next_q.unchain()
-#        target = reward + done * self.gamma * next_q
-        target = reward + self.gamma * next_q
+        target = reward + done * self.gamma * next_q
+#        target = reward + self.gamma * next_q
 
         loss = F.mean_squared_error(q, target)
 
@@ -101,17 +101,18 @@ class DQNAgent:
 
 def main():
     episodes = 500  # エピソード数
+    record = 20  # 記録間隔
     sync_interval = 20  #　同期間隔
-    directory = "test2"  # ファイル名
+    directory = "test"  # ファイル名
     os.mkdir(directory)
 
-    t_limit = 1e-9 # [s]  # 終了時間
+    t_limit = 2e-9 # [s]  # 終了時間
     dt = t_limit / 1e3
     limit = int(t_limit / dt)
-    alphaG = 0.008 # ギルバート減衰定数
-    anisotropy = np.array([0e0, 0e0, 0e0]) # [Oe]  # 異方性
-    H_shape = np.array([4*np.pi*0.012*1000, 4*np.pi*0.98*1000, 4*np.pi*0.008*1000])  #  [Oe]  # 反磁場
-    dh = 80 # [Oe]  # 行動間隔ごとの磁場変化
+    alphaG = 0.01 # ギルバート減衰定数
+    anisotropy = np.array([0e0, 0e0, 100e0]) # [Oe]  # 異方性
+    H_shape = np.array([0.012*10800*0, 0.98*10800*0, 0.008*10800*0])  #  [Oe]  # 反磁場
+    dh = 100 # [Oe]  # 行動間隔ごとの磁場変化
     da = 1e-10 # [s]  # 行動間隔  da<=1e-10
     m0 = np.array([0e0, 0e0, 1e0])  #  初期磁化
     b = 0
@@ -175,7 +176,7 @@ def main():
                 max_slope = slope
                 b = dynamics.m[2] - slope*time 
 
-            if i % (da/dt) == 0 and i != 0:
+            if i % (da/dt) == 0:
                 state = np.concatenate([dynamics.m, field/1e4])
                 action = agent.get_action(state, epsilon)
                 h0 = action - 1
@@ -183,7 +184,7 @@ def main():
                 reward = - dynamics.m[2]**3
                 total_reward += reward
 
-                if i == limit:
+                if i == limit+1:
                     done = 0   
                              
                 loss = agent.update(old_state, old_action, reward, state, done)
@@ -199,7 +200,7 @@ def main():
         if episode % sync_interval == 0:
             agent.sync_qnet()
 
-        if episode % 20 == 19:
+        if episode % record == record-1:
             s.save_episode(episode+1, t, m, h, directory)
 
         if total_reward > best_reward:
@@ -269,9 +270,9 @@ def main():
     axes[1].legend()
 
     axes[2].set_ylim([y_min, y_max])
-    axes[2].plot(t, best_Hshape[:,0], label='ani_x')
-    axes[2].plot(t, best_Hshape[:,1], label='ani_y')
-    axes[2].plot(t, best_Hshape[:,2], label='ani_z')
+    axes[2].plot(t, best_Hshape[:,0], label='shape_x')
+    axes[2].plot(t, best_Hshape[:,1], label='shape_y')
+    axes[2].plot(t, best_Hshape[:,2], label='shape_z')
     axes[2].set_xlabel('Time [s]')
     axes[2].set_ylabel('H_shape [Oe]')
     axes[2].legend()
@@ -281,7 +282,7 @@ def main():
 
 
 #    p.plot_energy(m_max, dynamics)
-    p.plot_3d(best_m)
+#    p.plot_3d(best_m)
     np.savetxt(directory+"/m.txt", best_m)
     with open(directory+"/options.txt", mode='w') as f:
         f.write('alphaG = ')

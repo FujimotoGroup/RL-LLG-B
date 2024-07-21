@@ -1,0 +1,10 @@
+alphaG = 0.01
+anisotropy = [    0.     0. 10000.] [Oe]
+H_shape = [0. 0. 0.] [Oe]
+dH = 1000 [Oe]
+da = 1e-10 [s]
+m0 = [0. 0. 1.]
+
+best episode = 18
+switting time = 1.1397784729321027e-09 [s]
+average reward = 0.05396665450044742
