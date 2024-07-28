@@ -3,6 +3,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+plt.rcParams['mathtext.fontset'] = 'cm'
+plt.rcParams['font.size'] = 18
 
 
 class Magnetization:
@@ -50,16 +52,16 @@ def plot(t:list, m:list, h:list, issave:bool=False):
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 6))
     axes[0].set_ylim([-1e0,1e0])
-    axes[0].plot(t, m[:,0], label='m_x')
-    axes[0].plot(t, m[:,1], label='m_y')
-    axes[0].plot(t, m[:,2], label='m_z')
+    axes[0].plot(t, m[:,0], label='$m_x$')
+    axes[0].plot(t, m[:,1], label='$m_y$')
+    axes[0].plot(t, m[:,2], label='$m_z$')
     axes[0].set_xlabel('Time [s]')
     axes[0].set_ylabel('Magnetization')
     axes[0].legend()
 
-    axes[1].plot(t, h[:,0], label='h_x')
-    axes[1].plot(t, h[:,1], label='h_y')
-    axes[1].plot(t, h[:,2], label='h_z')
+    axes[1].plot(t, h[:,0], label='$h_x$')
+    axes[1].plot(t, h[:,1], label='$h_y$')
+    axes[1].plot(t, h[:,2], label='$h_z$')
     axes[1].set_xlabel('Time [s]')
     axes[1].set_ylabel('Magnetic Field [Oe]')
     axes[1].legend()
@@ -71,6 +73,7 @@ def plot(t:list, m:list, h:list, issave:bool=False):
 
 def save_episode(episode:int, t:list, m:list, h:list, directory:str):
     fig = plot(t,m,h, issave=True)
+    fig.tight_layout()
     fig.savefig(directory+"/episode{:0=5}.png".format(episode), dpi=200)
     plt.close()
 
@@ -85,7 +88,8 @@ def save_reward_history(reward_history:list, directory:str):
     plt.ylabel('Total Reward')
     plt.plot(range(len(reward_history)), reward_history, label='Reward of 1 Episode')
     plt.plot(episodes[::slice_num], average, label='Average Reward of 20 Episode')
-    plt.legend()
+    plt.legend(fontsize=14)
+    plt.tight_layout()
     plt.savefig(directory+"/reward_history.png", dpi=200)
     plt.close()
 

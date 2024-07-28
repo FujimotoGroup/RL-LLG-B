@@ -2,6 +2,8 @@ from copy import copy
 from copy import deepcopy
 import numpy as np
 import matplotlib.pyplot as plt
+plt.rcParams['mathtext.fontset'] = 'cm'
+plt.rcParams['font.size'] = 18
 import os
 from dezero import Model
 from dezero import optimizers
@@ -100,20 +102,20 @@ class DQNAgent:
 
 
 def main():
-    episodes = 500  # エピソード数
+    episodes = 1000  # エピソード数
     record = 20  # 記録間隔
     sync_interval = 20  #　同期間隔
-    directory = "test"  # ファイル名
+    directory = "x_Kz=100_Ky=-10000_da=0.01"  # ファイル名
     os.mkdir(directory)
 
     t_limit = 2e-9 # [s]  # 終了時間
     dt = t_limit / 1e3
     limit = int(t_limit / dt)
     alphaG = 0.01 # ギルバート減衰定数
-    anisotropy = np.array([0e0, 0e0, 100e0]) # [Oe]  # 異方性
+    anisotropy = np.array([0e0, -10000e0, 100e0]) # [Oe]  # 異方性
     H_shape = np.array([0.012*10800*0, 0.98*10800*0, 0.008*10800*0])  #  [Oe]  # 反磁場
-    dh = 100 # [Oe]  # 行動間隔ごとの磁場変化
-    da = 1e-10 # [s]  # 行動間隔  da<=1e-10
+    dh = 10 # [Oe]  # 行動間隔ごとの磁場変化
+    da = 1e-11 # [s]  # 行動間隔  da<=1e-10
     m0 = np.array([0e0, 0e0, 1e0])  #  初期磁化
     b = 0
 
@@ -182,6 +184,8 @@ def main():
                 h0 = action - 1
 
                 reward = - dynamics.m[2]**3
+                if field[0] == 0:
+                    reward *= 1.06
                 total_reward += reward
 
                 if i == limit+1:
@@ -212,7 +216,7 @@ def main():
             best_Hshape = np.array(Hshape)
             best_slope = max_slope
             best_b = b
-            switting_time = (-1-best_b)/best_slope
+            reversal_time = (-1-best_b)/best_slope
 
         print("reward = {:.9f}".format(total_reward))
 
@@ -230,17 +234,20 @@ def main():
 
     x = np.linspace(0, t_limit, 1000)
     y = best_slope*x + best_b
+    plt.figure(figsize=(6,6))
     plt.ylim(-1, 1)
     plt.xlabel('Time [s]')
     plt.ylabel('Magnetization')
-    plt.plot(np.array(t), best_m[:,2], color='green', label='m_z')
-    plt.plot(x, y, color='red', linestyle='dashed', label='connection')
-    plt.legend()
-    plt.savefig(directory+"/switting_time.png", dpi=200)
+    plt.plot(np.array(t), best_m[:,2], color='green', label='$m_z$')
+    plt.plot(x, y, color='red', linestyle='dashed', label='tangent')
+    plt.legend(fontsize=16)
+    plt.tight_layout()
+    plt.savefig(directory+"/reversal_time.png", dpi=200)
     plt.close()
 
 
-    fig, axes = plt.subplots(1, 3, figsize=(12, 6))
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+#    fig, axes = plt.subplots(2, 2, figsize=(12, 6))
 
     y_max = best_h.max()
     if best_h.max() <= best_Hani.max():
@@ -254,29 +261,30 @@ def main():
         y_min = best_Hshape.min()
 
     axes[0].set_ylim([y_min, y_max])
-    axes[0].plot(t, best_h[:,0], label='h_x')
-    axes[0].plot(t, best_h[:,1], label='h_y')
-    axes[0].plot(t, best_h[:,2], label='h_z')
+    axes[0].plot(t, best_h[:,0], label='$h_x$')
+    axes[0].plot(t, best_h[:,1], label='$h_y$')
+    axes[0].plot(t, best_h[:,2], label='$h_z$')
     axes[0].set_xlabel('Time [s]')
-    axes[0].set_ylabel('H_ext [Oe]')
+    axes[0].set_ylabel('$H_(ext)$ [Oe]')
     axes[0].legend()
 
     axes[1].set_ylim([y_min, y_max])
-    axes[1].plot(t, best_Hani[:,0], label='ani_x')
-    axes[1].plot(t, best_Hani[:,1], label='ani_y')
-    axes[1].plot(t, best_Hani[:,2], label='ani_z')
+    axes[1].plot(t, best_Hani[:,0], label='$h_x$')
+    axes[1].plot(t, best_Hani[:,1], label='$h_y$')
+    axes[1].plot(t, best_Hani[:,2], label='$h_z$')
     axes[1].set_xlabel('Time [s]')
-    axes[1].set_ylabel('H_ani [Oe]')
+    axes[1].set_ylabel('$H_(ani)$ [Oe]')
     axes[1].legend()
 
     axes[2].set_ylim([y_min, y_max])
-    axes[2].plot(t, best_Hshape[:,0], label='shape_x')
-    axes[2].plot(t, best_Hshape[:,1], label='shape_y')
-    axes[2].plot(t, best_Hshape[:,2], label='shape_z')
+    axes[2].plot(t, best_Hshape[:,0], label='$h_x$')
+    axes[2].plot(t, best_Hshape[:,1], label='$h_y$')
+    axes[2].plot(t, best_Hshape[:,2], label='$h_z$')
     axes[2].set_xlabel('Time [s]')
-    axes[2].set_ylabel('H_shape [Oe]')
+    axes[2].set_ylabel('$H_(shape)$ [Oe]')
     axes[2].legend()
 
+    fig.tight_layout()
     fig.savefig(directory+"/field.png", dpi=200)
     plt.close()
 
@@ -300,7 +308,7 @@ def main():
         f.write('\n\nbest episode = ')
         f.write(str(best_episode))
         f.write('\nswitting time = ')
-        f.write(str(switting_time))
+        f.write(str(reversal_time))
         f.write(' [s]\naverage reward = ')
         f.write(str(best_reward/(t_limit/da)))
 

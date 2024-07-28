@@ -26,7 +26,7 @@ ax.set_xlabel("x")
 ax.set_ylabel("y")
 ax.set_zlabel("z")
 ax.set_zlim(-500, 0)
-plt.show()
+#plt.show()
 plt.close()
 
 #m
