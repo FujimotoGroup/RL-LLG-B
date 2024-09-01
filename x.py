@@ -1,21 +1,20 @@
 from copy import copy
-from copy import deepcopy
+from collections import deque
+import random
 import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
 import matplotlib.pyplot as plt
 plt.rcParams['mathtext.fontset'] = 'cm'
 plt.rcParams['font.size'] = 18
 import os
-from dezero import Model
-from dezero import optimizers
-from dezero import Variable
-import dezero.functions as F
-import dezero.layers as L
-from collections import deque
-import random
 
 from modules import system as s
-from modules import plot as p
+#from modules import plot as p
 
+#　経験再生
 class ReplayBuffer:
     def __init__(self, buffer_size, batch_size):
         self.buffer = deque(maxlen=buffer_size)
@@ -30,52 +29,54 @@ class ReplayBuffer:
     
     def get_batch(self):
         data = random.sample(self.buffer, self.batch_size)
-        state = np.stack([x[0] for x in data])
-        action = np.array([x[1] for x in data])
-        reward = np.array([x[2] for x in data])
-        next_state = np.stack([x[3] for x in data])
-        done = np.array([x[4] for x in data])
+        state = torch.tensor(np.stack([x[0] for x in data])).cuda()
+        action = torch.tensor(np.array([x[1] for x in data]).astype(int)).cuda()
+        reward = torch.tensor(np.array([x[2] for x in data]).astype(np.float32)).cuda()
+        next_state = torch.tensor(np.stack([x[3] for x in data])).cuda()
+        done = torch.tensor(np.array([x[4] for x in data]).astype(np.int32)).cuda()
         return state, action, reward, next_state, done
 
-class QNet(Model):
-    def __init__(self):
+#　ニューラルネットワーク
+class QNet(nn.Module):
+    def __init__(self, action_size):
         super().__init__()
-        self.l1 = L.Linear(128)
-        self.l2 = L.Linear(128)
-        self.l3 = L.Linear(128)
-        self.l4 = L.Linear(3)
+        self.l1 = nn.Linear(6, 128)  # 6:状態の数
+        self.l2 = nn.Linear(128, 128)
+        self.l3 = nn.Linear(128, 128)
+        self.l4 = nn.Linear(128, action_size)
 
     def forward(self, x):
+        x = x.float()
         x = F.relu(self.l1(x))
         x = F.relu(self.l2(x))
         x = F.relu(self.l3(x))
         x = self.l4(x)
         return x
 
+#　エージェント
 class DQNAgent:
     def __init__(self):
-        self.gamma = 0.98
-        self.lr = 0.0005
-        self.buffer_size = 10000
-        self.batch_size = 32
-        self.action_size = 3
+        self.gamma = 0.98  # 割引率
+        self.lr = 0.0005  # 学習率
+        self.buffer_size = 10000  # 経験再生のバッファサイズ
+        self.batch_size = 32  # ミニバッチのサイズ
+        self.action_size = 3  # 行動の選択肢
 
         self.replay_buffer = ReplayBuffer(self.buffer_size, self.batch_size)
-        self.qnet = QNet()
-        self.qnet_target = QNet()
-        self.optimizer = optimizers.Adam(self.lr)
-        self.optimizer.setup(self.qnet)
+        self.qnet = QNet(self.action_size).cuda()
+        self.qnet_target = QNet(self.action_size).cuda()
+        self.optimizer = optim.Adam(self.qnet.parameters(), lr=self.lr)
 
     def sync_qnet(self):
-        self.qnet_target = deepcopy(self.qnet)
+        self.qnet_target.load_state_dict(self.qnet.state_dict())
 
     def get_action(self, state, epsilon):
         if np.random.rand() < epsilon:
             return np.random.choice(self.action_size)
         else:
-            state = state[np.newaxis, :]
+            state = torch.tensor(state[np.newaxis, :]).cuda()
             qs = self.qnet(state)
-            return qs.data.argmax()
+            return qs.argmax().item()
 
     def update(self, state, action, reward, next_state, done):
         self.replay_buffer.add(state, action, reward, next_state, done)
@@ -83,29 +84,37 @@ class DQNAgent:
             return None
 
         state, action, reward, next_state, done = self.replay_buffer.get_batch()
+
+        state = state.cuda()
+        action = action.cuda()
+        reward = reward.cuda()
+        next_state = next_state.cuda()
+        done = done.cuda()
+
         qs = self.qnet(state)
         q = qs[np.arange(self.batch_size), action]
 
         next_qs = self.qnet_target(next_state)
-        next_q = next_qs.max(axis=1)
-        next_q.unchain()
+        next_q = next_qs.max(1)[0]
+        next_q.detach()
         target = reward + done * self.gamma * next_q
 #        target = reward + self.gamma * next_q
 
-        loss = F.mean_squared_error(q, target)
+        loss_fn = nn.MSELoss()
+        loss = loss_fn(q, target)
 
-        self.qnet.cleargrads()
+        self.optimizer.zero_grad()
         loss.backward()
-        self.optimizer.update()
+        self.optimizer.step()
 
         return loss.data
 
 
 def main():
-    episodes = 1000  # エピソード数
-    record = 20  # 記録間隔
+    episodes = 2000  # エピソード数
+    record = episodes/50  # 記録間隔
     sync_interval = 20  #　同期間隔
-    directory = "x_Kz=100_Ky=-10000_da=0.01"  # ファイル名
+    directory = "test"  # ファイル名
     os.mkdir(directory)
 
     t_limit = 2e-9 # [s]  # 終了時間
@@ -122,7 +131,7 @@ def main():
     agent = DQNAgent()
     reward_history = []
     best_reward = -500
-    loss_history = []
+#    loss_history = []
 
     for episode in range(episodes):
         print("episode:{:>4}".format(episode+1), end=":")
@@ -134,9 +143,12 @@ def main():
         Hani = []
         Hshape = []
 
-        epsilon = 0.1
-#        if episode > episodes*0.9:
-#            epsilon = 0
+#        epsilon = 0.1
+        if episode < episodes/2:
+            epsilon = (0.1-1)/(episodes/2-0)*(episode)+1
+        else:
+            epsilon = (0-0.1)/(episodes-episodes/2)*(episode-episodes/2)+0.1
+        print(epsilon)
 
         old_m = np.array([0e0, 0e0, 1e0])
         old_mz = m0[2]
@@ -185,7 +197,7 @@ def main():
 
                 reward = - dynamics.m[2]**3
                 if field[0] == 0:
-                    reward *= 1.06
+                    reward *= 1.08
                 total_reward += reward
 
                 if i == limit+1:
@@ -218,6 +230,14 @@ def main():
             best_b = b
             reversal_time = (-1-best_b)/best_slope
 
+#        if episode == 100-1:
+#            one_m = np.array(m)
+#            one_h = np.array(h)
+
+#        if episode == 200-1:
+#            two_m = np.array(m)
+#            two_h = np.array(h)
+
         print("reward = {:.9f}".format(total_reward))
 
         reward_history.append(total_reward)
@@ -238,16 +258,18 @@ def main():
     plt.ylim(-1, 1)
     plt.xlabel('Time [s]')
     plt.ylabel('Magnetization')
-    plt.plot(np.array(t), best_m[:,2], color='green', label='$m_z$')
-    plt.plot(x, y, color='red', linestyle='dashed', label='tangent')
+    plt.plot(np.array(t), best_m[:,0], label='$m_z$')
+    plt.plot(np.array(t), best_m[:,1], label='$m_z$')
+    plt.plot(np.array(t), best_m[:,2], label='$m_z$')
     plt.legend(fontsize=16)
+    plt.plot(x, y, color='darkgreen', linestyle='dashed')
     plt.tight_layout()
     plt.savefig(directory+"/reversal_time.png", dpi=200)
     plt.close()
 
 
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
-#    fig, axes = plt.subplots(2, 2, figsize=(12, 6))
+    axes = axes.flatten()
 
     y_max = best_h.max()
     if best_h.max() <= best_Hani.max():
@@ -265,7 +287,7 @@ def main():
     axes[0].plot(t, best_h[:,1], label='$h_y$')
     axes[0].plot(t, best_h[:,2], label='$h_z$')
     axes[0].set_xlabel('Time [s]')
-    axes[0].set_ylabel('$H_(ext)$ [Oe]')
+    axes[0].set_ylabel('$H_{\mathrm{ext}}$ [Oe]')
     axes[0].legend()
 
     axes[1].set_ylim([y_min, y_max])
@@ -273,7 +295,7 @@ def main():
     axes[1].plot(t, best_Hani[:,1], label='$h_y$')
     axes[1].plot(t, best_Hani[:,2], label='$h_z$')
     axes[1].set_xlabel('Time [s]')
-    axes[1].set_ylabel('$H_(ani)$ [Oe]')
+    axes[1].set_ylabel('$H_{\mathrm{ani}}$ [Oe]')
     axes[1].legend()
 
     axes[2].set_ylim([y_min, y_max])
@@ -281,7 +303,7 @@ def main():
     axes[2].plot(t, best_Hshape[:,1], label='$h_y$')
     axes[2].plot(t, best_Hshape[:,2], label='$h_z$')
     axes[2].set_xlabel('Time [s]')
-    axes[2].set_ylabel('$H_(shape)$ [Oe]')
+    axes[2].set_ylabel('$H_{\mathrm{shape}}$ [Oe]')
     axes[2].legend()
 
     fig.tight_layout()
@@ -291,26 +313,32 @@ def main():
 
 #    p.plot_energy(m_max, dynamics)
 #    p.plot_3d(best_m)
+
     np.savetxt(directory+"/m.txt", best_m)
-    with open(directory+"/options.txt", mode='w') as f:
-        f.write('alphaG = ')
-        f.write(str(alphaG))
-        f.write('\nanisotropy = ')
-        f.write(str(anisotropy))
-        f.write(' [Oe]\nH_shape = ')
-        f.write(str(H_shape))
-        f.write(' [Oe]\ndH = ')
-        f.write(str(dh))
-        f.write(' [Oe]\nda = ')
-        f.write(str(da))
-        f.write(' [s]\nm0 = ')
-        f.write(str(m0))
-        f.write('\n\nbest episode = ')
-        f.write(str(best_episode))
-        f.write('\nswitting time = ')
-        f.write(str(reversal_time))
-        f.write(' [s]\naverage reward = ')
-        f.write(str(best_reward/(t_limit/da)))
+    np.savetxt(directory+"/h.txt", best_h)
+    np.savetxt(directory+"/t.txt", t)
+#    np.savetxt(directory+"/100th_m.txt", one_m)
+#    np.savetxt(directory+"/100th_h.txt", one_h)
+#    np.savetxt(directory+"/200th_m.txt", two_m)
+#    np.savetxt(directory+"/200th_h.txt", two_h)
+    np.savetxt(directory+"/reward history.txt", reward_history)
+
+    with open(directory + "/options.txt", mode='w') as f:
+        f.write(f"""
+    alphaG = {alphaG}
+    anisotropy = {anisotropy} [Oe]
+    H_shape = {H_shape} [Oe]
+    dH = {dh} [Oe]
+    da = {da} [s]
+    m0 = {m0}
+
+    best episode = {best_episode}
+    reversal time = {reversal_time} [s]
+    time limit = {t_limit} [s]
+    slope = {best_slope}
+    segment = {best_b}
+    average reward = {best_reward / (t_limit / da)}
+    """)
 
 
 if __name__ == '__main__':

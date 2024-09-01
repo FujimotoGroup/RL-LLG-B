@@ -1,20 +1,18 @@
 from copy import copy
-from copy import deepcopy
+from collections import deque
+import random
 import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
 import matplotlib.pyplot as plt
 plt.rcParams['mathtext.fontset'] = 'cm'
 plt.rcParams['font.size'] = 18
 import os
-from dezero import Model
-from dezero import optimizers
-from dezero import Variable
-import dezero.functions as F
-import dezero.layers as L
-from collections import deque
-import random
 
 from modules import system as s
-from modules import plot as p
+#from modules import plot as p
 
 class ReplayBuffer:
     def __init__(self, buffer_size, batch_size):
@@ -30,22 +28,23 @@ class ReplayBuffer:
     
     def get_batch(self):
         data = random.sample(self.buffer, self.batch_size)
-        state = np.stack([x[0] for x in data])
-        action = np.array([x[1] for x in data])
-        reward = np.array([x[2] for x in data])
-        next_state = np.stack([x[3] for x in data])
-        done = np.array([x[4] for x in data])
+        state = torch.tensor(np.stack([x[0] for x in data])).cuda()
+        action = torch.tensor(np.array([x[1] for x in data]).astype(int)).cuda()
+        reward = torch.tensor(np.array([x[2] for x in data]).astype(np.float32)).cuda()
+        next_state = torch.tensor(np.stack([x[3] for x in data])).cuda()
+        done = torch.tensor(np.array([x[4] for x in data]).astype(np.int32)).cuda()
         return state, action, reward, next_state, done
 
-class QNet(Model):
-    def __init__(self):
+class QNet(nn.Module):
+    def __init__(self, action_size):
         super().__init__()
-        self.l1 = L.Linear(128)
-        self.l2 = L.Linear(128)
-        self.l3 = L.Linear(128)
-        self.l4 = L.Linear(9)
+        self.l1 = nn.Linear(6, 128)
+        self.l2 = nn.Linear(128, 128)
+        self.l3 = nn.Linear(128, 128)
+        self.l4 = nn.Linear(128, action_size)
 
     def forward(self, x):
+        x = x.float()
         x = F.relu(self.l1(x))
         x = F.relu(self.l2(x))
         x = F.relu(self.l3(x))
@@ -61,21 +60,20 @@ class DQNAgent:
         self.action_size = 9
 
         self.replay_buffer = ReplayBuffer(self.buffer_size, self.batch_size)
-        self.qnet = QNet()
-        self.qnet_target = QNet()
-        self.optimizer = optimizers.Adam(self.lr)
-        self.optimizer.setup(self.qnet)
+        self.qnet = QNet(self.action_size).cuda()
+        self.qnet_target = QNet(self.action_size).cuda()
+        self.optimizer = optim.Adam(self.qnet.parameters(), lr=self.lr)
 
     def sync_qnet(self):
-        self.qnet_target = deepcopy(self.qnet)
+        self.qnet_target.load_state_dict(self.qnet.state_dict())
 
     def get_action(self, state, epsilon):
         if np.random.rand() < epsilon:
             return np.random.choice(self.action_size)
         else:
-            state = state[np.newaxis, :]
+            state = torch.tensor(state[np.newaxis, :]).cuda()
             qs = self.qnet(state)
-            return qs.data.argmax()
+            return qs.argmax().item()
 
     def update(self, state, action, reward, next_state, done):
         self.replay_buffer.add(state, action, reward, next_state, done)
@@ -83,29 +81,37 @@ class DQNAgent:
             return None
 
         state, action, reward, next_state, done = self.replay_buffer.get_batch()
+
+        state = state.cuda()
+        action = action.cuda()
+        reward = reward.cuda()
+        next_state = next_state.cuda()
+        done = done.cuda()
+
         qs = self.qnet(state)
         q = qs[np.arange(self.batch_size), action]
 
         next_qs = self.qnet_target(next_state)
-        next_q = next_qs.max(axis=1)
-        next_q.unchain()
+        next_q = next_qs.max(1)[0]
+        next_q.detach()
         target = reward + done * self.gamma * next_q
 #        target = reward + self.gamma * next_q
 
-        loss = F.mean_squared_error(q, target)
+        loss_fn = nn.MSELoss()
+        loss = loss_fn(q, target)
 
-        self.qnet.cleargrads()
+        self.optimizer.zero_grad()
         loss.backward()
-        self.optimizer.update()
+        self.optimizer.step()
 
         return loss.data
 
 
 def main():
     episodes = 2000
-    record = 50
+    record = episodes/50
     sync_interval = 20
-    directory = "xy_Kz=100"
+    directory = "torch_test_xy_3"
     os.mkdir(directory)
 
     t_limit = 2e-9 # [s]
@@ -119,10 +125,22 @@ def main():
     m0 = np.array([0e0, 0e0, 1e0])
     b = 0
 
+    action_to_a = {
+        0: [-1, -1, 0],
+        1: [-1,  0, 0],
+        2: [-1,  1, 0],
+        3: [ 0, -1, 0],
+        4: [ 0,  0, 0],
+        5: [ 0,  1, 0],
+        6: [ 1, -1, 0],
+        7: [ 1,  0, 0],
+        8: [ 1,  1, 0],
+    }
+
     agent = DQNAgent()
     reward_history = []
     best_reward = -500
-    loss_history = []
+#    loss_history = []
 
     for episode in range(episodes):
         print("episode:{:>4}".format(episode+1), end=":")
@@ -157,27 +175,10 @@ def main():
         for i in range(1, limit+1):
             if i == 1:
                 action = agent.get_action(old_state, epsilon)
-                if action == 0:
-                    a = [-1, -1, 0]
-                if action == 1:
-                    a = [-1, 0, 0]
-                if action == 2:
-                    a = [-1, 1, 0]
-                if action == 3:
-                    a = [0, -1, 0]
-                if action == 4:
-                    a = [0, 0, 0]
-                if action == 5:
-                    a = [0, 1, 0]
-                if action == 6:
-                    a = [1, -1, 0]
-                if action == 7:
-                    a = [1, 0, 0]
-                if action == 8:
-                    a = [1, 1, 0]
-                old_action = action                    
+                a = action_to_a[action]
+                old_action = action
 
-            field += dh*np.array(a)*dt/da   
+            field += dh*np.array(a)*dt/da
 
             time = i*dt
 
@@ -198,24 +199,7 @@ def main():
             if i % (da/dt) == 0:
                 state = np.concatenate([dynamics.m, field/1e4])
                 action = agent.get_action(state, epsilon)
-                if action == 0:
-                    a = [-1, -1, 0]
-                if action == 1:
-                    a = [-1, 0, 0]
-                if action == 2:
-                    a = [-1, 1, 0]
-                if action == 3:
-                    a = [0, -1, 0]
-                if action == 4:
-                    a = [0, 0, 0]
-                if action == 5:
-                    a = [0, 1, 0]
-                if action == 6:
-                    a = [1, -1, 0]
-                if action == 7:
-                    a = [1, 0, 0]
-                if action == 8:
-                    a = [1, 1, 0]
+                a = action_to_a[action]
 
                 reward = - dynamics.m[2]**3
                 if field[0] == 0:
@@ -271,15 +255,19 @@ def main():
     plt.ylim(-1, 1)
     plt.xlabel('Time [s]')
     plt.ylabel('Magnetization')
-    plt.plot(np.array(t), best_m[:,2], color='green', label='$m_z$')
-    plt.plot(x, y, color='red', linestyle='dashed', label='tangent')
+    plt.plot(np.array(t), best_m[:,0], label='$m_z$')
+    plt.plot(np.array(t), best_m[:,1], label='$m_z$')
+    plt.plot(np.array(t), best_m[:,2], label='$m_z$')
     plt.legend(fontsize=16)
+    plt.plot(x, y, color='darkgreen', linestyle='dashed')
     plt.tight_layout()
     plt.savefig(directory+"/reversal_time.png", dpi=200)
     plt.close()
 
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+    axes = axes.flatten()
 
+    y_max = best_h.max()
     if best_h.max() <= best_Hani.max():
         y_max = best_Hani.max()
     if best_Hani.max() <= best_Hshape.max():
@@ -295,7 +283,7 @@ def main():
     axes[0].plot(t, best_h[:,1], label='$h_y$')
     axes[0].plot(t, best_h[:,2], label='$h_z$')
     axes[0].set_xlabel('Time [s]')
-    axes[0].set_ylabel('$H_(ext)$ [Oe]')
+    axes[0].set_ylabel('$H_{\mathrm{ext}}$ [Oe]')
     axes[0].legend()
 
     axes[1].set_ylim([y_min, y_max])
@@ -303,7 +291,7 @@ def main():
     axes[1].plot(t, best_Hani[:,1], label='$h_y$')
     axes[1].plot(t, best_Hani[:,2], label='$h_z$')
     axes[1].set_xlabel('Time [s]')
-    axes[1].set_ylabel('$H_(ani)$ [Oe]')
+    axes[1].set_ylabel('$H_{\mathrm{ani}}$ [Oe]')
     axes[1].legend()
 
     axes[2].set_ylim([y_min, y_max])
@@ -311,7 +299,7 @@ def main():
     axes[2].plot(t, best_Hshape[:,1], label='$h_y$')
     axes[2].plot(t, best_Hshape[:,2], label='$h_z$')
     axes[2].set_xlabel('Time [s]')
-    axes[2].set_ylabel('$H_(shape)$ [Oe]')
+    axes[2].set_ylabel('$H_{\mathrm{shape}}$ [Oe]')
     axes[2].legend()
 
     fig.tight_layout()
@@ -321,26 +309,29 @@ def main():
 
 #    p.plot_energy(m_max, dynamics)
 #    p.plot_3d(best_m)
+
     np.savetxt(directory+"/m.txt", best_m)
-    with open(directory+"/options.txt", mode='w') as f:
-        f.write('alphaG = ')
-        f.write(str(alphaG))
-        f.write('\nanisotropy = ')
-        f.write(str(anisotropy))
-        f.write(' [Oe]\nH_shape = ')
-        f.write(str(H_shape))
-        f.write(' [Oe]\ndH = ')
-        f.write(str(dh))
-        f.write(' [Oe]\nda = ')
-        f.write(str(da))
-        f.write(' [s]\nm0 = ')
-        f.write(str(m0))
-        f.write('\n\nbest episode = ')
-        f.write(str(best_episode))
-        f.write('\nreversal time = ')
-        f.write(str(reversal_time))
-        f.write(' [s]\naverage reward = ')
-        f.write(str(best_reward/(t_limit/da)))
+    np.savetxt(directory+"/h.txt", best_h)
+    np.savetxt(directory+"/t.txt", t)
+    np.savetxt(directory+"/reward history.txt", reward_history)
+
+    with open(directory + "/options.txt", mode='w') as f:
+        f.write(f"""
+    alphaG = {alphaG}
+    anisotropy = {anisotropy} [Oe]
+    H_shape = {H_shape} [Oe]
+    dH = {dh} [Oe]
+    da = {da} [s]
+    m0 = {m0}
+
+    best episode = {best_episode}
+    reversal time = {reversal_time} [s]
+    time limit = {t_limit} [s]
+    slope = {best_slope}
+    segment = {best_b}
+    average reward = {best_reward / (t_limit / da)}
+    """)
+
 
 
 if __name__ == '__main__':

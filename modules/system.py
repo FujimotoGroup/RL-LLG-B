@@ -59,9 +59,9 @@ def plot(t:list, m:list, h:list, issave:bool=False):
     axes[0].set_ylabel('Magnetization')
     axes[0].legend()
 
-    axes[1].plot(t, h[:,0], label='$h_x$')
-    axes[1].plot(t, h[:,1], label='$h_y$')
-    axes[1].plot(t, h[:,2], label='$h_z$')
+    axes[1].plot(t, h[:,0], label='$h_x$', color='deepskyblue')
+    axes[1].plot(t, h[:,1], label='$h_y$', color='goldenrod')
+    axes[1].plot(t, h[:,2], label='$h_z$', color='lawngreen')
     axes[1].set_xlabel('Time [s]')
     axes[1].set_ylabel('Magnetic Field [Oe]')
     axes[1].legend()
@@ -84,10 +84,11 @@ def save_reward_history(reward_history:list, directory:str):
     slice_num = 20
     average = [ reward_history_array[i:i+slice_num].mean() for i in episodes[::slice_num]]
 
+    plt.figure(figsize=(6,6))
     plt.xlabel('Episode')
-    plt.ylabel('Total Reward')
-    plt.plot(range(len(reward_history)), reward_history, label='Reward of 1 Episode')
-    plt.plot(episodes[::slice_num], average, label='Average Reward of 20 Episode')
+    plt.ylabel('Rewards')
+    plt.plot(range(len(reward_history)), reward_history, label='Rewards for each Episode')
+    plt.plot(episodes[::slice_num], average, label='Average Rewards for 20 Episodes')
     plt.legend(fontsize=14)
     plt.tight_layout()
     plt.savefig(directory+"/reward_history.png", dpi=200)
