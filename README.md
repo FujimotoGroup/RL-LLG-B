@@ -27,6 +27,7 @@ ani= ー　磁気異方性定数　[Oe]　　+ 容易軸　　- 困難軸
 ーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーーー
 ### Prior_Research
 先行研究との比較
+
 Bauer　：　"Switching behavior of a Stoner particle beyond the relaxation time limit", Phys. Rev. B **61**, 3410 (2000).
 
 Schumacher　：　"Quasiballistic Magnetization Reversal", Phys. Rev. Lett. **90**, 017204 (2003).
