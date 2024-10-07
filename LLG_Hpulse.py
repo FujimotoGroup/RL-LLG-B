@@ -86,18 +86,14 @@ def main():
     fig.savefig(directory+"/Pulse.png", dpi=200)
     plt.close()
 
-    with open(directory+"/options.txt", mode='w') as f:
-        f.write('t_pulse = ')
-        f.write(str(t_pulse))
-        f.write(' [s]\nalphaG = ')
-        f.write(str(alpha))
-        f.write('\nH_pulse = ')
-        f.write(str(H_ext0))
-        f.write(' [Oe]\nanisotropy = ')
-        f.write(str(H_ani))
-        f.write(' [Oe]\nH_shape = ')
-        f.write(str(H_shape))
-        f.write(' [Oe]')
+    with open(directory + "/options.txt", mode='w') as f:
+        f.write(f"""
+    alphaG = {alpha}
+    t_pulse = {t_pulse} [s]
+    H_ext = {H_ext0} [Oe]
+    H_ani = {H_ani} [Oe]
+    H_shape = {H_shape} [Oe]
+    """)
 
 #    fig = plt.figure(figsize = (8, 8))
 #    ax = fig.add_subplot(111, projection='3d')

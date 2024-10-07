@@ -1,7 +1,0 @@
-dt = 5e-13
-alphaG = 0
-anisotropy = [  0.   0. 540.]
-dH = 10
-da = 1e-11
-m0 = [0. 0. 1.]
-ave_reward = 0.45109140627785643

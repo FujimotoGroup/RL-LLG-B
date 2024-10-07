@@ -6,7 +6,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 m = np.loadtxt('m.txt')
-anisotropy = np.array([0e0, 0e0, 540e0]) # optional
+anisotropy = np.array([0e0, 0e0, 100e0]) # optional
 
 #energy
 mx = np.arange(-1, 1, 0.01)

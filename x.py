@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 plt.rcParams['mathtext.fontset'] = 'cm'
 plt.rcParams['font.size'] = 18
 import os
+from datetime import datetime
 
 from modules import system as s
 #from modules import plot as p
@@ -40,7 +41,7 @@ class ReplayBuffer:
 class QNet(nn.Module):
     def __init__(self, action_size):
         super().__init__()
-        self.l1 = nn.Linear(6, 128)  # 6:状態の数
+        self.l1 = nn.Linear(6, 128)          # 6:状態の数
         self.l2 = nn.Linear(128, 128)
         self.l3 = nn.Linear(128, 128)
         self.l4 = nn.Linear(128, action_size)
@@ -56,16 +57,18 @@ class QNet(nn.Module):
 #　エージェント
 class DQNAgent:
     def __init__(self):
-        self.gamma = 0.98  # 割引率
-        self.lr = 0.0005  # 学習率
+        self.gamma = 0.98         # 割引率
+        self.lr = 0.001           # 学習率
+        self.lr_decay = 0.9999     # 学習率の減衰率
         self.buffer_size = 10000  # 経験再生のバッファサイズ
-        self.batch_size = 32  # ミニバッチのサイズ
-        self.action_size = 3  # 行動の選択肢
+        self.batch_size = 32      # ミニバッチのサイズ
+        self.action_size = 3      # 行動の選択肢
 
         self.replay_buffer = ReplayBuffer(self.buffer_size, self.batch_size)
         self.qnet = QNet(self.action_size).cuda()
         self.qnet_target = QNet(self.action_size).cuda()
         self.optimizer = optim.Adam(self.qnet.parameters(), lr=self.lr)
+        self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=self.lr_decay)
 
     def sync_qnet(self):
         self.qnet_target.load_state_dict(self.qnet.state_dict())
@@ -97,7 +100,7 @@ class DQNAgent:
         next_qs = self.qnet_target(next_state)
         next_q = next_qs.max(1)[0]
         next_q.detach()
-        target = reward + done * self.gamma * next_q
+        target = reward + (1-done) * self.gamma * next_q
 #        target = reward + self.gamma * next_q
 
         loss_fn = nn.MSELoss()
@@ -111,20 +114,21 @@ class DQNAgent:
 
 
 def main():
-    episodes = 2000  # エピソード数
-    record = episodes/50  # 記録間隔
-    sync_interval = 20  #　同期間隔
-    directory = "test"  # ファイル名
+    start_time = datetime.now()  # 処理開始時刻
+    episodes = 2000              # エピソード数
+    record = episodes/50         # 記録間隔
+    sync_interval = episodes/10  #　同期間隔
+    directory = "H=x_dH=10_da=0.01_ani=(0,0,100)"   # ファイル名
     os.mkdir(directory)
 
-    t_limit = 2e-9 # [s]  # 終了時間
-    dt = t_limit / 1e3
+    t_limit = 2e-9 # [s]         # 終了時間
+    dt = t_limit / 1e3 # [s]
     limit = int(t_limit / dt)
-    alphaG = 0.01 # ギルバート減衰定数
-    anisotropy = np.array([0e0, -10000e0, 100e0]) # [Oe]  # 異方性
-    H_shape = np.array([0.012*10800*0, 0.98*10800*0, 0.008*10800*0])  #  [Oe]  # 反磁場
-    dh = 10 # [Oe]  # 行動間隔ごとの磁場変化
-    da = 1e-11 # [s]  # 行動間隔  da<=1e-10
+    alphaG = 0.01                # ギルバート減衰定数
+    anisotropy = np.array([0e0, 0e0, 100e0]) # [Oe]    # 異方性
+    H_shape = np.array([0.012*10800*0, 0.98*10800*0, 0.008*10800*0])  # [Oe]   # 反磁場
+    dh = 10 # [Oe]   # 行動間隔ごとの磁場変化
+    da = 1e-11 # [s]   # 行動間隔  da<=1e-10
     m0 = np.array([0e0, 0e0, 1e0])  #  初期磁化
     b = 0
 
@@ -145,10 +149,9 @@ def main():
 
 #        epsilon = 0.1
         if episode < episodes/2:
-            epsilon = (0.1-1)/(episodes/2-0)*(episode)+1
+            epsilon = (0.1-1)/(episodes/2-0)*(episode) + 1
         else:
-            epsilon = (0-0.1)/(episodes-episodes/2)*(episode-episodes/2)+0.1
-        print(epsilon)
+            epsilon = 0.1
 
         old_m = np.array([0e0, 0e0, 1e0])
         old_mz = m0[2]
@@ -157,7 +160,7 @@ def main():
         total_reward = 0
         total_loss = 0
         cnt = 0
-        done = 1
+        done = 0
         field = np.array([0e0, 0e0, 0e0])
         t.append(0)
         m.append(old_m)
@@ -184,6 +187,7 @@ def main():
             h.append(copy(field))
             Hani.append(anisotropy*dynamics.m)
             Hshape.append(H_shape*dynamics.m)
+
             slope = (dynamics.m[2]-old_mz) / dt
             old_mz = dynamics.m[2]
             if slope < max_slope:
@@ -200,8 +204,8 @@ def main():
                     reward *= 1.08
                 total_reward += reward
 
-                if i == limit+1:
-                    done = 0   
+                if i == limit:
+                    done = 1
                              
                 loss = agent.update(old_state, old_action, reward, state, done)
 
@@ -215,6 +219,8 @@ def main():
 
         if episode % sync_interval == 0:
             agent.sync_qnet()
+
+        agent.scheduler.step()
 
         if episode % record == record-1:
             s.save_episode(episode+1, t, m, h, directory)
@@ -251,6 +257,8 @@ def main():
 
     s.save_episode(0, t, best_m, best_h, directory)
 
+    end_time = datetime.now()           # 処理終了時刻
+    duration = end_time - start_time    # 処理時間
 
     x = np.linspace(0, t_limit, 1000)
     y = best_slope*x + best_b
@@ -331,10 +339,12 @@ def main():
     dH = {dh} [Oe]
     da = {da} [s]
     m0 = {m0}
+    time limit = {t_limit} [s]
 
     best episode = {best_episode}
     reversal time = {reversal_time} [s]
-    time limit = {t_limit} [s]
+    processing time = {duration}
+    
     slope = {best_slope}
     segment = {best_b}
     average reward = {best_reward / (t_limit / da)}

@@ -6,7 +6,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 plt.rcParams['mathtext.fontset'] = 'cm'
 plt.rcParams['font.size'] = 18
 
-directory = "x_Kz=100"  # input
+directory = "H=x_dH=10_da=0.01_ani=(0,-10000,100)"  # input
 
 m_opt = np.loadtxt(directory+"/m.txt")
 h_opt = np.loadtxt(directory+"/h.txt")
@@ -20,7 +20,7 @@ slope = -6783408045.165612  # input
 segment = 2.8868502483333027  # input
 t_limit = 2e-9
 
-def fig3(history,time, m_opt, h_opt, m_one, h_one, m_two, h_two):
+def fig_ep100_ep200(history,time, m_opt, h_opt, m_one, h_one, m_two, h_two):
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
     axes = axes.flatten()
 
@@ -84,44 +84,6 @@ def fig3(history,time, m_opt, h_opt, m_one, h_one, m_two, h_two):
     plt.close()
 
 
-def fig(history,time, m_opt, h_opt):
-    fig, axes = plt.subplots(1, 2, figsize=(13, 6))
-    axes = axes.flatten()
-
-    reward_history_array = np.array(history)
-    episodes = np.arange(len(history))
-    slice_num = 20
-    average = [ reward_history_array[i:i+slice_num].mean() for i in episodes[::slice_num]]
-
-    x = np.linspace(0, t_limit, 1000)
-    y = slope*x + segment
-
-    axes[0].set_xlabel('Episode')
-    axes[0].set_ylabel('Rewards')
-    axes[0].plot(episodes, history, label='Rewards for each Episode')
-    axes[0].plot(episodes[::slice_num], average, label='Average Rewards for 20 Episodes')
-    axes[0].legend(fontsize=14)
-
-    axes[1].set_ylim([-1e0,1e0])
-    l11, = axes[1].plot(time, m_opt[:,0], label='$m_x$')
-    l12, = axes[1].plot(time, m_opt[:,1], label='$m_y$')
-    l13, = axes[1].plot(time, m_opt[:,2], label='$m_z$')
-    l14, = axes[1].plot(x, y, color='darkgreen', linestyle='dashed', label='tangent')
-    axes[1].set_xlabel('Time [s]')
-    axes[1].set_ylabel('Magnetization')
-    twin = axes[1].twinx()
-    twin.set_ylim([-500,500])
-    l15, = twin.plot(time, h_opt[:,0], label='$h_x$', color='deepskyblue')
-    twin.set_ylabel('Magnetic Field [Oe]')
-    axes[1].legend(handles=[l11, l12, l13, l15])
-#    axes[1].legend(handles=[l13, l15])
-
-    fig.tight_layout()
-#    fig.savefig(directory+"/fig3.pdf", dpi=200)
-    fig.savefig(directory+"/fig.png", dpi=200)
-    plt.close()
-
-
 def save_reward_history(history):
     reward_history_array = np.array(history)
     episodes = np.arange(len(history))
@@ -139,8 +101,7 @@ def save_reward_history(history):
     plt.close()
 
 
-
-def fig13(history,time, m_opt, h_opt):
+def fig(history,time, m_opt, h_opt):
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
     axes = axes.flatten()
 
@@ -176,11 +137,10 @@ def fig13(history,time, m_opt, h_opt):
 
     fig.tight_layout()
 #    fig.savefig(directory+"/fig3.pdf", dpi=200)
-    fig.savefig(directory+"/fig.png", dpi=200)
+    fig.savefig(directory+"/FIG.png", dpi=200)
     plt.close()
 
 
-#fig3(history,time, m_opt, h_opt, m_one, h_one, m_two, h_two)
-#fig(history,time, m_opt, h_opt)
+#fig_ep100_ep200(history,time, m_opt, h_opt, m_one, h_one, m_two, h_two)
 #save_reward_history(history)
-fig13(history,time, m_opt, h_opt)
+fig(history,time, m_opt, h_opt)

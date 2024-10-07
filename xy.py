@@ -54,7 +54,8 @@ class QNet(nn.Module):
 class DQNAgent:
     def __init__(self):
         self.gamma = 0.98
-        self.lr = 0.0005
+        self.lr = 0.001
+        self.lr_decay = 0.999
         self.buffer_size = 10000
         self.batch_size = 32
         self.action_size = 9
@@ -63,6 +64,7 @@ class DQNAgent:
         self.qnet = QNet(self.action_size).cuda()
         self.qnet_target = QNet(self.action_size).cuda()
         self.optimizer = optim.Adam(self.qnet.parameters(), lr=self.lr)
+        self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=self.lr_decay)
 
     def sync_qnet(self):
         self.qnet_target.load_state_dict(self.qnet.state_dict())
@@ -94,7 +96,7 @@ class DQNAgent:
         next_qs = self.qnet_target(next_state)
         next_q = next_qs.max(1)[0]
         next_q.detach()
-        target = reward + done * self.gamma * next_q
+        target = reward + (1-done) * self.gamma * next_q
 #        target = reward + self.gamma * next_q
 
         loss_fn = nn.MSELoss()
@@ -110,8 +112,8 @@ class DQNAgent:
 def main():
     episodes = 2000
     record = episodes/50
-    sync_interval = 20
-    directory = "torch_test_xy_3"
+    sync_interval = episodes/10
+    directory = "H=xy_dH=100_da=0.1_ani=(0,0,100)_2"
     os.mkdir(directory)
 
     t_limit = 2e-9 # [s]
@@ -152,9 +154,11 @@ def main():
         Hani = []
         Hshape = []
 
-        epsilon = 0.1
-#        if episode > episodes*0.9:
-#            epsilon = 0
+#        epsilon = 0.1
+        if episode < episodes/2:
+            epsilon = (0.1-1)/(episodes/2-0)*(episode) + 1
+        else:
+            epsilon = 0.1
 
         old_m = np.array([0e0, 0e0, 1e0])
         old_mz = m0[2]
@@ -163,7 +167,7 @@ def main():
         total_reward = 0
         total_loss = 0
         cnt = 0
-        done = 1
+        done = 0
         field = np.array([0e0, 0e0, 0e0])
         t.append(0)
         m.append(old_m)
@@ -190,6 +194,7 @@ def main():
             h.append(copy(field))
             Hani.append(anisotropy*dynamics.m)
             Hshape.append(H_shape*dynamics.m)
+
             slope = (dynamics.m[2]-old_mz) / dt
             old_mz = dynamics.m[2]
             if slope < max_slope:
@@ -202,12 +207,12 @@ def main():
                 a = action_to_a[action]
 
                 reward = - dynamics.m[2]**3
-                if field[0] == 0:
-                    reward *= 1.06
+                if field[0] == 0 and field[1] == 0:
+                    reward *= 1.08
                 total_reward += reward
 
-                if i == limit+1:
-                    done = 0   
+                if i == limit:
+                    done = 1
                              
                 loss = agent.update(old_state, old_action, reward, state, done)
 
@@ -221,6 +226,8 @@ def main():
 
         if episode % sync_interval == 0:
             agent.sync_qnet()
+
+        agent.scheduler.step()
 
         if episode % record == record-1:
             s.save_episode(episode+1, t, m, h, directory)
@@ -323,10 +330,11 @@ def main():
     dH = {dh} [Oe]
     da = {da} [s]
     m0 = {m0}
+    time limit = {t_limit} [s]
 
     best episode = {best_episode}
     reversal time = {reversal_time} [s]
-    time limit = {t_limit} [s]
+    
     slope = {best_slope}
     segment = {best_b}
     average reward = {best_reward / (t_limit / da)}
