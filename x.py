@@ -1,3 +1,4 @@
+# 修正可能範囲　119-135行目に記載
 from copy import copy
 from collections import deque
 import random
@@ -15,27 +16,62 @@ from datetime import datetime
 from modules import system as s
 #from modules import plot as p
 
-#　経験再生
+from collections import deque
+import random
+import numpy as np
+import torch
+
 class ReplayBuffer:
     def __init__(self, buffer_size, batch_size):
-        self.buffer = deque(maxlen=buffer_size)
+        """
+        リプレイバッファの初期化。バッファサイズとバッチサイズを指定します。
+
+        Args:
+        - buffer_size (int): リプレイバッファの最大サイズ。
+        - batch_size (int): 1度に取得するサンプルの数。
+        """
+        self.buffer = deque(maxlen=buffer_size)  # 経験を格納するための循環バッファ
         self.batch_size = batch_size
 
     def add(self, state, action, reward, next_state, done):
+        """
+        新しい経験をリプレイバッファに追加します。
+
+        Args:
+        - state (numpy.ndarray): 現在の環境の状態。
+        - action (int): 現在の状態で取った行動。
+        - reward (float): 行動を取った後に得た報酬。
+        - next_state (numpy.ndarray): 行動後に観測された次の状態。
+        - done (int): エピソードが終了したかどうかを示すフラグ（1: 終了、0: 継続）。
+        """
         data = (state, action, reward, next_state, done)
-        self.buffer.append(data)
+        self.buffer.append(data)  # 新しい経験をバッファに追加
 
     def __len__(self):
-        return len(self.buffer)
+        """
+        リプレイバッファの現在のサイズを返します。
+        """
+        return len(self.buffer)  # バッファ内のデータ数を返す
     
     def get_batch(self):
-        data = random.sample(self.buffer, self.batch_size)
-        state = torch.tensor(np.stack([x[0] for x in data])).cuda()
-        action = torch.tensor(np.array([x[1] for x in data]).astype(int)).cuda()
-        reward = torch.tensor(np.array([x[2] for x in data]).astype(np.float32)).cuda()
-        next_state = torch.tensor(np.stack([x[3] for x in data])).cuda()
-        done = torch.tensor(np.array([x[4] for x in data]).astype(np.int32)).cuda()
+        """
+        リプレイバッファから経験をバッチ単位で取得します。
+
+        Returns:
+        - state (torch.Tensor): 現在の状態のバッチ。
+        - action (torch.Tensor): 行動のバッチ。
+        - reward (torch.Tensor): 報酬のバッチ。
+        - next_state (torch.Tensor): 次の状態のバッチ。
+        - done (torch.Tensor): エピソードが終了したかを示すフラグのバッチ。
+        """
+        data = random.sample(self.buffer, self.batch_size)  # バッファからランダムにサンプルを取得
+        state = torch.tensor(np.stack([x[0] for x in data])).cuda()  # 状態をテンソルに変換
+        action = torch.tensor(np.array([x[1] for x in data]).astype(int)).cuda()  # 行動をテンソルに変換
+        reward = torch.tensor(np.array([x[2] for x in data]).astype(np.float32)).cuda()  # 報酬をテンソルに変換
+        next_state = torch.tensor(np.stack([x[3] for x in data])).cuda()  # 次の状態をテンソルに変換
+        done = torch.tensor(np.array([x[4] for x in data]).astype(np.int32)).cuda()  # 終了フラグをテンソルに変換
         return state, action, reward, next_state, done
+
 
 #　ニューラルネットワーク
 class QNet(nn.Module):
@@ -115,6 +151,7 @@ class DQNAgent:
 
 def main():
     start_time = datetime.now()  # 処理開始時刻
+    # 以下修正可能--------------------------------------------------------------------------
     episodes = 2000              # エピソード数
     record = episodes/50         # 記録間隔
     sync_interval = episodes/10  #　同期間隔
@@ -130,6 +167,7 @@ def main():
     dh = 10 # [Oe]   # 行動間隔ごとの磁場変化
     da = 1e-11 # [s]   # 行動間隔  da<=1e-10
     m0 = np.array([0e0, 0e0, 1e0])  #  初期磁化
+    # 以上修正可能--------------------------------------------------------------------------
     b = 0
 
     agent = DQNAgent()
