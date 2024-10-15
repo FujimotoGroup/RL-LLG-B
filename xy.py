@@ -1,3 +1,5 @@
+# 修正可能範囲　118-136行目に記載
+
 from copy import copy
 from collections import deque
 import random
@@ -10,6 +12,7 @@ import matplotlib.pyplot as plt
 plt.rcParams['mathtext.fontset'] = 'cm'
 plt.rcParams['font.size'] = 18
 import os
+from datetime import datetime
 
 from modules import system as s
 #from modules import plot as p
@@ -55,10 +58,10 @@ class DQNAgent:
     def __init__(self):
         self.gamma = 0.98
         self.lr = 0.001
-        self.lr_decay = 0.999
+        self.lr_decay = 0.9999
         self.buffer_size = 10000
         self.batch_size = 32
-        self.action_size = 9
+        self.action_size = 9  # 行動の選択肢
 
         self.replay_buffer = ReplayBuffer(self.buffer_size, self.batch_size)
         self.qnet = QNet(self.action_size).cuda()
@@ -110,6 +113,10 @@ class DQNAgent:
 
 
 def main():
+    start_time = datetime.now()
+
+    # 以下修正可能 ------------------------------------------------------------------------
+
     episodes = 2000
     record = episodes/50
     sync_interval = episodes/10
@@ -125,8 +132,12 @@ def main():
     dh = 100 # [Oe]
     da = 1e-10 # [s]
     m0 = np.array([0e0, 0e0, 1e0])
+
+    # 以上修正可能 ------------------------------------------------------------------------
+
     b = 0
 
+    # 行動の選択肢
     action_to_a = {
         0: [-1, -1, 0],
         1: [-1,  0, 0],
@@ -208,7 +219,7 @@ def main():
 
                 reward = - dynamics.m[2]**3
                 if field[0] == 0 and field[1] == 0:
-                    reward *= 1.08
+                    reward *= 1.08  # Hx=Hy=0のとき報酬を増加
                 total_reward += reward
 
                 if i == limit:
@@ -255,6 +266,9 @@ def main():
         s.save_reward_history(reward_history, directory)
 
     s.save_episode(0, t, best_m, best_h, directory)
+
+    end_time = datetime.now()
+    duration = end_time - start_time
 
     x = np.linspace(0, t_limit, 1000)
     y = best_slope*x + best_b
@@ -334,6 +348,7 @@ def main():
 
     best episode = {best_episode}
     reversal time = {reversal_time} [s]
+    processing time = {duration}
     
     slope = {best_slope}
     segment = {best_b}

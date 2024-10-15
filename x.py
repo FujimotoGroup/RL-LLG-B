@@ -1,9 +1,5 @@
-<<<<<<< HEAD
 # 修正可能範囲　195-214行目に記載
 
-=======
-# 修正可能範囲　119-135行目に記載
->>>>>>> 76f6b566ccc2edf954a2c7f54c9076a3794c25c1
 from copy import copy
 from collections import deque
 import random
@@ -29,27 +25,16 @@ import torch
 class ReplayBuffer:
     def __init__(self, buffer_size, batch_size):
         """
-<<<<<<< HEAD
         経験再生バッファの初期化
         Args:
         - buffer_size (int): バッファに保存できるデータの最大数
         - batch_size (int): バッチごとに取得するデータの数
         """
         self.buffer = deque(maxlen=buffer_size)  # 経験データを格納するデータ構造
-=======
-        リプレイバッファの初期化。バッファサイズとバッチサイズを指定します。
-
-        Args:
-        - buffer_size (int): リプレイバッファの最大サイズ。
-        - batch_size (int): 1度に取得するサンプルの数。
-        """
-        self.buffer = deque(maxlen=buffer_size)  # 経験を格納するための循環バッファ
->>>>>>> 76f6b566ccc2edf954a2c7f54c9076a3794c25c1
         self.batch_size = batch_size
 
     def add(self, state, action, reward, next_state, done):
         """
-<<<<<<< HEAD
         バッファに新しい経験データを追加
         Args:
         - state (np.ndarray): 現在の状態
@@ -57,23 +42,12 @@ class ReplayBuffer:
         - reward (float): 行動による報酬
         - next_state (np.ndarray): 次の状態
         - done (bool): エピソード終了フラグ
-=======
-        新しい経験をリプレイバッファに追加します。
-
-        Args:
-        - state (numpy.ndarray): 現在の環境の状態。
-        - action (int): 現在の状態で取った行動。
-        - reward (float): 行動を取った後に得た報酬。
-        - next_state (numpy.ndarray): 行動後に観測された次の状態。
-        - done (int): エピソードが終了したかどうかを示すフラグ（1: 終了、0: 継続）。
->>>>>>> 76f6b566ccc2edf954a2c7f54c9076a3794c25c1
         """
         data = (state, action, reward, next_state, done)
         self.buffer.append(data)  # 新しい経験をバッファに追加
 
     def __len__(self):
         """
-<<<<<<< HEAD
         バッファに格納されている経験の数を返す
         """
         return len(self.buffer)
@@ -94,29 +68,6 @@ class ReplayBuffer:
         reward = torch.tensor(np.array([x[2] for x in data]).astype(np.float32)).cuda()
         next_state = torch.tensor(np.stack([x[3] for x in data])).cuda()
         done = torch.tensor(np.array([x[4] for x in data]).astype(np.int32)).cuda()
-=======
-        リプレイバッファの現在のサイズを返します。
-        """
-        return len(self.buffer)  # バッファ内のデータ数を返す
-    
-    def get_batch(self):
-        """
-        リプレイバッファから経験をバッチ単位で取得します。
-
-        Returns:
-        - state (torch.Tensor): 現在の状態のバッチ。
-        - action (torch.Tensor): 行動のバッチ。
-        - reward (torch.Tensor): 報酬のバッチ。
-        - next_state (torch.Tensor): 次の状態のバッチ。
-        - done (torch.Tensor): エピソードが終了したかを示すフラグのバッチ。
-        """
-        data = random.sample(self.buffer, self.batch_size)  # バッファからランダムにサンプルを取得
-        state = torch.tensor(np.stack([x[0] for x in data])).cuda()  # 状態をテンソルに変換
-        action = torch.tensor(np.array([x[1] for x in data]).astype(int)).cuda()  # 行動をテンソルに変換
-        reward = torch.tensor(np.array([x[2] for x in data]).astype(np.float32)).cuda()  # 報酬をテンソルに変換
-        next_state = torch.tensor(np.stack([x[3] for x in data])).cuda()  # 次の状態をテンソルに変換
-        done = torch.tensor(np.array([x[4] for x in data]).astype(np.int32)).cuda()  # 終了フラグをテンソルに変換
->>>>>>> 76f6b566ccc2edf954a2c7f54c9076a3794c25c1
         return state, action, reward, next_state, done
 
 
@@ -244,31 +195,9 @@ class DQNAgent:
 
 
 def main():
-<<<<<<< HEAD
     start_time = datetime.now()  # 処理開始時間
 
     # 以下修正可能 ------------------------------------------------------------------------
-=======
-    start_time = datetime.now()  # 処理開始時刻
-    # 以下修正可能--------------------------------------------------------------------------
-    episodes = 2000              # エピソード数
-    record = episodes/50         # 記録間隔
-    sync_interval = episodes/10  #　同期間隔
-    directory = "H=x_dH=10_da=0.01_ani=(0,0,100)"   # ファイル名
-    os.mkdir(directory)
-
-    t_limit = 2e-9 # [s]         # 終了時間
-    dt = t_limit / 1e3 # [s]
-    limit = int(t_limit / dt)
-    alphaG = 0.01                # ギルバート減衰定数
-    anisotropy = np.array([0e0, 0e0, 100e0]) # [Oe]    # 異方性
-    H_shape = np.array([0.012*10800*0, 0.98*10800*0, 0.008*10800*0])  # [Oe]   # 反磁場
-    dh = 10 # [Oe]   # 行動間隔ごとの磁場変化
-    da = 1e-11 # [s]   # 行動間隔  da<=1e-10
-    m0 = np.array([0e0, 0e0, 1e0])  #  初期磁化
-    # 以上修正可能--------------------------------------------------------------------------
-    b = 0
->>>>>>> 76f6b566ccc2edf954a2c7f54c9076a3794c25c1
 
     episodes = 2000  # エピソード数
     record = episodes/50  # 結果の記録間隔
