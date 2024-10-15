@@ -14,7 +14,7 @@
 ### Results
 - [ ] ディレクトリの中身を説明する  
 例えば  
-./Results/H=x_dH=10_da=0.01_ani=(0,-10000,100)/  
+  ./Results/H=x_dH=10_da=0.01_ani=(0,-10000,100)/  
 というようなディレクトリがある  
 意味としては  
 H=[外部磁場の方向]  
@@ -27,8 +27,8 @@ ani=[磁気異方性定数　[Oe];　　+の場合は容易軸異方性　　-�
 ### Prior_Research
 - [ ] フォルダ名を変える
 - [ ] それに伴って説明文を加える
-先行研究との比較（結果のみ）
-codeは./x.pyを使用
+先行研究との比較（結果のみ）  
+codeは./x.pyを使用  
 
 Bauer　：　"Switching behavior of a Stoner particle beyond the relaxation time limit", Phys. Rev. B **61**, 3410 (2000).
 
