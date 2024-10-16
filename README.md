@@ -1,36 +1,87 @@
-### 高速磁化反転のための外部磁場印加方法推定 ー 強化学習利用
-### Code
-- [ ] コメントを増やす
-- ./x.py
-  - 強化学習プログラム．磁場方向 x
-  -   `python3 x.py`で実行
+# Magnetization Simulation using DQN
 
-- ./xy.py
-  - 強化学習プログラム．磁場方向 xy
-  - `python3 xy.py`で実行
+This project simulates magnetization dynamics using a Reinforcement Learning approach (Deep Q-Networks, DQN). The simulation models the time evolution of magnetization under the influence of external magnetic fields and anisotropy, and the agent learns to control the magnetic field to optimize the magnetization reversal process.
 
----
+## Table of Contents
 
-### Results
-- [ ] ディレクトリの中身を説明する  
-例えば  
-  ./Results/H=x_dH=10_da=0.01_ani=(0,-10000,100)/  
-というようなディレクトリがある  
-意味としては  
-H=[外部磁場の方向]  
-dH=[１回の行動で変化させる磁場量　[Oe]]  
-da=[行動の間隔　[ns]]  
-ani=[磁気異方性定数　[Oe];　　+の場合は容易軸異方性　　-の場合は困難軸異方性]
+- [Overview](#overview)
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Output](#output)
+- [Dependencies](#dependencies)
+- [Results](#results)
 
----
+## Overview
 
-### Prior_Research
-- [ ] フォルダ名を変える
-- [ ] それに伴って説明文を加える
-先行研究との比較（結果のみ）  
-codeは./x.pyを使用  
+This project simulates magnetization dynamics with the goal of optimizing the reversal of magnetization using reinforcement learning. The magnetization is influenced by external fields, shape anisotropy, and damping, and a DQN agent learns to control the external magnetic field to achieve optimal magnetization reversal.
 
-Bauer　：　"Switching behavior of a Stoner particle beyond the relaxation time limit", Phys. Rev. B **61**, 3410 (2000).
+## Features
 
-Schumacher　：　"Quasiballistic Magnetization Reversal", Phys. Rev. Lett. **90**, 017204 (2003).
+- Simulates magnetization dynamics using Runge-Kutta methods.
+- Deep Q-Learning agent to control magnetic field variations.
+- Visualization of magnetization and magnetic field evolution over time.
+- Saves simulation data and plots for detailed analysis.
+
+## Installation
+
+1. Clone this repository to your local machine:
+
+   ```bash
+   git clone https://github.com/your-username/magnetization-dqn-simulation.git
+
+2. Navigate into the project directory:
+
+   ```bash
+   cd magnetization-dqn-simulation
+
+3. Install the required dependencies using `pip`:
+
+   ```bash
+   pip install -r requirements.txt
+
+## Usage
+
+To run the magnetization simulation with the DQN agent, execute hte `main.py` file:
+
+    ```bash
+    python main.py
+
+### Parameters
+
+You can modify the following key parameters in the `main()` function:
+- **episodes**: Number of episodes for tarining the DQN agent.
+- **t_limit**: Total simulation time.
+- **dt**: Time step for the simulation.
+- **alphaG**: Gilbert damping constant.
+- **anisotropy**: Anisotropy field vector.
+- **H_shape**: Shape magnetic field.
+- **dh**: Magnitude of magnetic field variation per action.
+- **da**: Time between actions.
+- **m0**: Initial magnetization direction.
+
+## Output
+
+During the simulation, the program will generate the following outputs:
+ 1. **Reward History**: A file `reward_history.txt` containging the rewards achieved by the DQN agent over the episodes.
+ 2. **Magnetization and Field Data**: Files `m.txt`, `h.txt`, and `t.txt` storing the magnetization, magnetic field, and time evolution data for the best episode.
+ 3. **Plots**:
+    - `reversal_time.png`: A plot of magnetization reversal time.
+    - `field.png`: A plot of external, anisotropy, and shape magnetic fields over time.
+   
+The best episode's data and other results are saved in a directory named based on the simulation parameters (e.g., `H=x_dh=100_da=0.01_ani=(0,0,100)`).
+
+## Dependencies
+
+The following Python libraries are required:
+- `numpy`
+- `matplotlib`
+- `os`
+- `copy`
+- `datetime`
+
+## Results
+
+
+
 
