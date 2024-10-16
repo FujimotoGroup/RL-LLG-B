@@ -17,11 +17,6 @@ from datetime import datetime
 from modules import system as s
 #from modules import plot as p
 
-from collections import deque
-import random
-import numpy as np
-import torch
-
 class ReplayBuffer:
     def __init__(self, buffer_size, batch_size):
         """
