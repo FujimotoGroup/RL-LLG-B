@@ -6,7 +6,6 @@ This project simulates magnetization dynamics using a Reinforcement Learning app
 
 - [Overview](#overview)
 - [Features](#features)
-- [Installation](#installation)
 - [Usage](#usage)
 - [Output](#output)
 - [Dependencies](#dependencies)
@@ -23,29 +22,13 @@ This project simulates magnetization dynamics with the goal of optimizing the re
 - Visualization of magnetization and magnetic field evolution over time.
 - Saves simulation data and plots for detailed analysis.
 
-## Installation
-
-1. Clone this repository to your local machine:
-
-   ```bash
-   git clone https://github.com/your-username/magnetization-dqn-simulation.git
-
-2. Navigate into the project directory:
-
-   ```bash
-   cd magnetization-dqn-simulation
-
-3. Install the required dependencies using `pip`:
-
-   ```bash
-   pip install -r requirements.txt
-
 ## Usage
 
 To run the magnetization simulation with the DQN agent, execute hte `main.py` file:
 
-    ```bash
-    python main.py
+```bash
+python main.py
+```
 
 ### Parameters
 
@@ -64,7 +47,9 @@ You can modify the following key parameters in the `main()` function:
 
 During the simulation, the program will generate the following outputs:
  1. **Reward History**: A file `reward_history.txt` containging the rewards achieved by the DQN agent over the episodes.
+
  2. **Magnetization and Field Data**: Files `m.txt`, `h.txt`, and `t.txt` storing the magnetization, magnetic field, and time evolution data for the best episode.
+
  3. **Plots**:
     - `reversal_time.png`: A plot of magnetization reversal time.
     - `field.png`: A plot of external, anisotropy, and shape magnetic fields over time.
@@ -76,6 +61,9 @@ The best episode's data and other results are saved in a directory named based o
 The following Python libraries are required:
 - `numpy`
 - `matplotlib`
+- `toch`
+- `deque`
+- `random`
 - `os`
 - `copy`
 - `datetime`
