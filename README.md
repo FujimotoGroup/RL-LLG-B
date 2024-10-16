@@ -1,6 +1,4 @@
-# Magnetization Simulation using DQN
-
-This project simulates magnetization dynamics using a Reinforcement Learning approach (Deep Q-Networks, DQN). The simulation models the time evolution of magnetization under the influence of external magnetic fields and anisotropy, and the agent learns to control the magnetic field to optimize the magnetization reversal process.
+# Reinforcement Learning Program for Estimating External Magnetic Field Application Methods for High-Speed Magnetization Reversal
 
 ## Table of Contents
 
@@ -13,7 +11,7 @@ This project simulates magnetization dynamics using a Reinforcement Learning app
 
 ## Overview
 
-This project simulates magnetization dynamics with the goal of optimizing the reversal of magnetization using reinforcement learning. The magnetization is influenced by external fields, shape anisotropy, and damping, and a DQN agent learns to control the external magnetic field to achieve optimal magnetization reversal.
+This project simulates magnetization dynamics using a Reinforcement Learning approach (Deep Q-Networks, DQN). The simulation models the time evolution of magnetization under the influence of external magnetic fields and anisotropy, and the agent learns to control the magnetic field to optimize the magnetization reversal process. In this context, optimization refers to reversing the magnetization as quickly as possible while ensuring it stops after the reversal is completed. 
 
 ## Features
 
@@ -24,24 +22,42 @@ This project simulates magnetization dynamics with the goal of optimizing the re
 
 ## Usage
 
-To run the magnetization simulation with the DQN agent, execute hte `main.py` file:
+To run the magnetization reversal simulation with the DQN agent, execute one of the following Python files depending on the magnetic field configuration:
+ - For simulations with a one-directional magnetic field (along the x-axis), run `x.py`:
+
+   ```bash
+   python x.py
+   
+ - For simulations with a two directional magnetic field (along the x and y axes), run `xy.py`:
+   ```bash
+   python xy.py
+
+### Directory structure
+
+To run the program, ensure that the `modules` directory is present in the project root. This contains essential modules required for numerical calculations of magnetization dynamics and graphical plotting of results.
 
 ```bash
-python main.py
+/project_root
+│
+├── x.py
+├── xy.py
+└── modules/
+    ├── plot.py
+    └── system.py
 ```
 
 ### Parameters
 
 You can modify the following key parameters in the `main()` function:
-- **episodes**: Number of episodes for tarining the DQN agent.
-- **t_limit**: Total simulation time.
-- **dt**: Time step for the simulation.
+- **episodes**: The number of episodes to run the simulation.
+- **t_limit**: The time limit for each episode (in seconds).
 - **alphaG**: Gilbert damping constant.
-- **anisotropy**: Anisotropy field vector.
-- **H_shape**: Shape magnetic field.
-- **dh**: Magnitude of magnetic field variation per action.
-- **da**: Time between actions.
-- **m0**: Initial magnetization direction.
+- **anisotropy**: The magnetic anisotropy constant (in Oersted). A positive value indicates an easy axis of magnetization, while a negative value indicates a hard axis.
+- **H_shape**: The influence of the demagnetizing field (in Oersted).
+- **dh**: Magnitude of magnetic field variation per action (in Oersted).
+- **da**: The action interval (in seconds).
+- **m0**: The initial magnetization vector.
+- **directory**: The name of the directory where the results are saved.
 
 ## Output
 
@@ -53,8 +69,6 @@ During the simulation, the program will generate the following outputs:
  3. **Plots**:
     - `reversal_time.png`: A plot of magnetization reversal time.
     - `field.png`: A plot of external, anisotropy, and shape magnetic fields over time.
-   
-The best episode's data and other results are saved in a directory named based on the simulation parameters (e.g., `H=x_dh=100_da=0.01_ani=(0,0,100)`).
 
 ## Dependencies
 
