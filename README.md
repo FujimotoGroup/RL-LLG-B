@@ -61,14 +61,17 @@ You can modify the following key parameters in the `main()` function:
 
 ## Output
 
-During the simulation, the program will generate the following outputs:
- 1. **Reward History**: A file `reward_history.txt` containging the rewards achieved by the DQN agent over the episodes.
+The program generates several output files in the specified directory:
 
- 2. **Magnetization and Field Data**: Files `m.txt`, `h.txt`, and `t.txt` storing the magnetization, magnetic field, and time evolution data for the best episode.
-
- 3. **Plots**:
-    - `reversal_time.png`: A plot of magnetization reversal time.
-    - `field.png`: A plot of external, anisotropy, and shape magnetic fields over time.
+- `options.txt`: Contains the parameters used in the simulation, as well as the magnetization reversal time.
+- `episodeXXXXX.png`: Graphs of the magnetic field and magnetization for the corresponding episode.
+- `episode00000.png`: Graphs of the magnetic field and magnetization for the optimal policy episode. :warning:
+- `reversal_time.png`: Shows the graph of magnetization under the optimal policy with a tangent line that defines the magnetization reversal time.
+- `field.png`: Plots the external field, anisotropy field, and demagnetizing field over time.
+- `m.txt`: Contains the magnetization values over time during the optimal policy episode.
+- `h.txt`: Contains the external magnetic field values over time during the optimal policy episode.
+- `t.txt`: Contains the time values used in the simulation during the optimal policy episode.
+- `reward history.txt`: Tracks the reward history of the DQN agent across episodes.
 
 ## Dependencies
 
@@ -84,6 +87,12 @@ The following Python libraries are required:
 
 ## Results
 
+The results of the simulations are stored in two directories: `./Results` and `./Prior_Research`.
 
+- **`./Results`**: This directory contains the simulation results based on the parameters we set independently. The directory names reflect the parameters used for the simulations, such as `./Results/H=x_dH=100_da=0.1_ani=(0,0,100)`, where `H=x` indicates the direction of the external magnetic field, `dH=100` refers to the magnetic field change per action (in Oersted), `da=0.1` represents the interval between actions (in nanoseconds), and `ani=(0,0,100)` denotes the magnetic anisotropy constants (in Oersted). The contents of each directory match the outputs described in the [Output](#Output) section.
+
+- **`./Prior_Research`**: This directory contains the results of simulations using the same parameters as those found in prior research. Inside, there are two subdirectories: `Bauer` and `Schumacher`, each referring to specific studies:
+  - `./Prior_Reseach/Bauer`: M. Bauer, J. Fassbender, B. Hillebrands, and R. L. Stamps, "Switching behavior of a Stoner particle beyond the relaxation time limit," Phys. Rev. B **61**, 3410 (2000).
+  - `./Prior_Reseach/Schumacher`: H. W. Schumacher, C. Chappert, R. C. Sousa, P. P. Freitas, and J. Miltat, "Quasiballistic Magnetization Reversal," Phys. Rev. Lett. **90**, 017204 (2003).
 
 
