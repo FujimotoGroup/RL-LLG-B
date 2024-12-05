@@ -1,0 +1,17 @@
+
+    alphaG = 0.01
+    anisotropy = [0. 0. 0.] [Oe]
+    H_shape = [  129.6 10584.     86.4] [Oe]
+    dH = 10 [Oe]
+    da = 1e-11 [s]
+    m0 = [0. 0. 1.]
+    time limit = 1e-09 [s]
+
+    best episode = 1564
+    reversal time = 2.0855607301484474e-10 [s]
+    processing time = 0:34:19.667708
+    
+    slope = -20388739192.073345
+    segment = 3.2521953796226755
+    average reward = 0.7232770406502842
+    
